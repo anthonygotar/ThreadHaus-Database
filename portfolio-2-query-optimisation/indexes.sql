@@ -38,3 +38,10 @@ CREATE INDEX idx_variant_instock ON product_variant (size, colour) WHERE stock_q
 -- DROP INDEX idx_variant_product;
 -- DROP INDEX idx_product_category;
 
+-- g. Q3 extra: best sellers – index on order_item(variant_id)
+-- TESTED AND DROPPED. Planner chose Seq Scan on order_item in every run.
+-- Median ~94.8 ms vs previous Q3 median 90.11 ms — regression.
+-- Reason: Q3 joins 250k order_item rows to ~7.7k matching orders via hash join.
+-- Hash join with seq scan on order_item beats nested loop with index when
+-- most of the table must be read anyway.
+-- DROP INDEX idx_order_item_variant;
