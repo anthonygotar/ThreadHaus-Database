@@ -238,3 +238,53 @@ The result is a set of clean tables where every non-key column depends on the wh
 
 This maps directly to the 14 tables in `schema.sql`: `customer`, `address`, `staff`, `rider`, `category`, `product`, `product_variant`, `orders`, `order_item`, `payment`, `delivery`, `return_request`, `complaint`, and `review`.
 
+---
+
+## 9. How I Ran and Tested It
+
+PostgreSQL version installed: **18.6**.
+
+I connected as the role `anthonygotar` with environment variables `PGHOST`, `PGUSER`, and `PGDATABASE` set. All commands used plain `psql`.
+
+**Commands used:**
+
+```bash
+# Drop and recreate the database
+psql -d postgres -c "DROP DATABASE IF EXISTS threadhaus;"
+psql -d postgres -c "CREATE DATABASE threadhaus;"
+
+# Run schema and sample data
+psql -v ON_ERROR_STOP=1 -f schema.sql
+psql -v ON_ERROR_STOP=1 -f sample-data.sql
+
+# Run verification queries
+psql -v ON_ERROR_STOP=1 -f checks.sql
+
+# Run constraint tests (no ON_ERROR_STOP — all five errors shown)
+psql -f constraint-tests.sql
+```
+
+`sample-data.sql` assumes a fresh database with identity columns starting at 1. Run `schema.sql` first on a new database before loading it.
+
+**Evidence files in `evidence/`:**
+
+| File | What it shows |
+|---|---|
+| `schema-run.txt` | Terminal output of running schema.sql |
+| `schema-run.png` | Screenshot of the same |
+| `tables.txt` | Output of `\dt` showing all 14 tables |
+| `product_variant-structure.txt` | Output of `\d product_variant` |
+| `product_variant.png` | Screenshot of the same |
+| `orders-structure.txt` | Output of `\d orders` |
+| `sample-data-run.txt` | Terminal output of running sample-data.sql |
+| `sample-data-run.png` | Screenshot of the same |
+| `checks-output.txt` | Output of running checks.sql |
+| `checks-output.png` | Screenshot of the same |
+| `constraint-tests-output.txt` | All five expected errors from constraint-tests.sql |
+| `er-diagram.png` | Exported ER diagram image |
+
+---
+
+## 10. AI Use
+
+I used an AI assistant in this portfolio. The full log of what it did and what I checked or changed is in `AI-USE.md` in the repo root.
