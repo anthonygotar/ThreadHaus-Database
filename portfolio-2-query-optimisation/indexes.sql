@@ -11,3 +11,7 @@ CREATE INDEX idx_orders_customer_date ON orders (customer_id, order_date DESC);
 -- Baseline median: 112.24 ms. After: 90.11 ms (-20%). Bitmap Index Scan on orders used.
 CREATE INDEX idx_orders_order_date ON orders (order_date);
 
+-- c. Q5: orders awaiting rider – partial index on status filter
+-- Baseline median: 20.85 ms. After: 0.73 ms (-97%). Index Scan used.
+CREATE INDEX idx_orders_awaiting ON orders (order_date) WHERE status IN ('paid', 'processing');
+
