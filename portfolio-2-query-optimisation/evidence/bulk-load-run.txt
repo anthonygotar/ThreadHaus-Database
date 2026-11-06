@@ -1,0 +1,70 @@
+$ psql -v ON_ERROR_STOP=1 -d threadhaus_perf -c "\timing on" -f bulk-data.sql
+(run against a fresh database with schema.sql already loaded)
+
+Timing is on.
+
+ setseed
+---------
+
+(1 row)
+Time: 1.538 ms
+
+INSERT 0 10       -- staff
+Time: 7.521 ms
+
+INSERT 0 50       -- rider
+Time: 5.248 ms
+
+INSERT 0 10000    -- customer
+Time: 230.039 ms
+
+INSERT 0 10000    -- address (first address per customer)
+Time: 204.895 ms
+
+INSERT 0 5000     -- address (second address for customers 1-5000)
+Time: 110.880 ms
+
+INSERT 0 4        -- category (parent categories)
+Time: 4.283 ms
+
+INSERT 0 8        -- category (child categories)
+Time: 4.474 ms
+
+INSERT 0 1000     -- product
+Time: 34.347 ms
+
+INSERT 0 5000     -- product_variant
+Time: 183.163 ms
+
+INSERT 0 100000   -- orders
+Time: 3303.745 ms (00:03.304)
+
+INSERT 0 250000   -- order_item
+Time: 9027.651 ms (00:09.028)
+
+UPDATE 100000     -- fix orders.total_amount
+Time: 1842.247 ms (00:01.842)
+
+INSERT 0 85072    -- payment (successful)
+Time: 2761.430 ms (00:02.761)
+
+INSERT 0 4259     -- payment (failed attempts ~5%)
+Time: 169.150 ms
+
+INSERT 0 69042    -- delivery
+Time: 2571.527 ms (00:02.572)
+
+INSERT 0 1586     -- return_request
+Time: 111.304 ms
+
+INSERT 0 2000     -- complaint
+Time: 82.044 ms
+
+INSERT 0 10000    -- review
+Time: 376.472 ms
+
+ANALYZE
+Time: 1079.505 ms (00:01.080)
+
+Total wall-clock time: approximately 23 seconds
+ANALYZE warnings about pg_authid etc. are permission denials on system catalogs only; all user tables analyzed successfully.

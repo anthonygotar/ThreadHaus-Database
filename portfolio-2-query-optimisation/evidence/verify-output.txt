@@ -1,0 +1,50 @@
+$ psql -v ON_ERROR_STOP=1 -d threadhaus_perf -f verify-bulk-data.sql
+
+-- a. Row counts for all 14 tables
+   table_name    | row_count
+-----------------+-----------
+ address         |     15000
+ category        |        12
+ complaint       |      2000
+ customer        |     10000
+ delivery        |     69042
+ order_item      |    250000
+ orders          |    100000
+ payment         |     89331
+ product         |      1000
+ product_variant |      5000
+ return_request  |      1586
+ review          |     10000
+ rider           |        50
+ staff           |        10
+(14 rows)
+
+-- b. Orders whose total_amount does not equal sum of items (must be 0)
+ total_mismatch_count
+----------------------
+                    0
+(1 row)
+
+-- c. Orders placed in the last 30 days
+ orders_last_30_days
+---------------------
+                8369
+(1 row)
+
+-- d. Status distribution of orders
+   status   | count | pct
+------------+-------+------
+ delivered  | 53792 | 53.8
+ shipped    | 15250 | 15.3
+ processing | 11988 | 12.0
+ pending    |  7900 |  7.9
+ cancelled  |  7028 |  7.0
+ returned   |  2027 |  2.0
+ paid       |  2015 |  2.0
+(7 rows)
+
+-- e. Orders with more than one payment
+ orders_with_multiple_payments
+-------------------------------
+                          4259
+(1 row)
