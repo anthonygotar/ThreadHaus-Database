@@ -164,3 +164,77 @@ CASCADE is used only on `address.customer_id` and `order_item.order_id`. Everyth
 
 **Table names orders and return_request.** `ORDER` and `RETURN` are reserved words in SQL. Using them as table names without quoting causes parse errors. I named the tables `orders` and `return_request` to avoid the conflict entirely, so queries do not need quoted identifiers.
 
+---
+
+## 8. Normalisation
+
+I started from a flat order sheet where each row represents one order, with item details crammed into single cells.
+
+**Flat table (unnormalised):**
+
+| order_id | customer_name | customer_phone | customer_email | delivery_address | item_names | sizes | colours | quantities | prices | order_total | payment_method | payment_status | rider_name | rider_phone | delivery_status |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Funmi Adebayo | 07011111111 | funmi@example.com | 12 Allen Ave, Lagos | Ankara Shirt, Slim Joggers | M, M | Blue, Black | 1, 2 | 9000, 6500 | 22000.00 | card | successful | Chukwudi Eze | 08031234567 | delivered |
+
+The item_names, sizes, colours, quantities and prices columns hold multiple values per cell. This violates First Normal Form.
+
+---
+
+**1NF — one value per cell, one row per item:**
+
+Split each item onto its own row. The key becomes `(order_id, sku)`.
+
+| order_id | customer_name | customer_phone | customer_email | delivery_address | sku | item_name | size | colour | quantity | unit_price | order_total | payment_method | payment_status | rider_name | rider_phone | delivery_status |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Funmi Adebayo | 07011111111 | funmi@example.com | 12 Allen Ave, Lagos | TH-ANK-M-BLU | Ankara Shirt | M | Blue | 1 | 9000.00 | 22000.00 | card | successful | Chukwudi Eze | 08031234567 | delivered |
+| 1 | Funmi Adebayo | 07011111111 | funmi@example.com | 12 Allen Ave, Lagos | TH-JOG-M-BLK | Slim Joggers | M | Black | 2 | 6500.00 | 22000.00 | card | successful | Chukwudi Eze | 08031234567 | delivered |
+
+Now every cell holds one value. But item_name, size, colour depend only on `sku`, not on the full key `(order_id, sku)`. Customer columns depend only on `customer_email`. This violates Second Normal Form.
+
+---
+
+**2NF — remove partial dependencies:**
+
+Columns that depend on only part of the key move to their own tables.
+
+- Product columns (item_name, size, colour, unit_price) depend only on `sku` → split into **product_variant**.
+- Order columns (customer, address, total, payment, rider, delivery status) depend only on `order_id` → split into **orders**.
+- What remains — `(order_id, sku, quantity, unit_price)` — is **order_item**.
+
+**orders:**
+
+| order_id | customer_name | customer_phone | customer_email | delivery_address | order_total | payment_method | payment_status | rider_name | rider_phone | delivery_status |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Funmi Adebayo | 07011111111 | funmi@example.com | 12 Allen Ave, Lagos | 22000.00 | card | successful | Chukwudi Eze | 08031234567 | delivered |
+
+**order_item:**
+
+| order_id | sku | quantity | unit_price |
+|---|---|---|---|
+| 1 | TH-ANK-M-BLU | 1 | 9000.00 |
+| 1 | TH-JOG-M-BLK | 2 | 6500.00 |
+
+**product_variant:**
+
+| sku | item_name | size | colour | price |
+|---|---|---|---|---|
+| TH-ANK-M-BLU | Ankara Shirt | M | Blue | 9000.00 |
+| TH-JOG-M-BLK | Slim Joggers | M | Black | 6500.00 |
+
+No more partial dependencies. But in the orders table, customer_phone and customer_email depend on customer_name (not on order_id). Rider_phone depends on rider_name. These are transitive dependencies, which violates Third Normal Form.
+
+---
+
+**3NF — remove transitive dependencies:**
+
+- Customer columns (name, phone, email) depend on the customer, not the order → split into **customer**.
+- Rider columns (name, phone) depend on the rider → split into **rider**.
+- Payment columns (method, status) belong to a payment attempt, not the order → split into **payment**.
+- Delivery (status, rider) is its own event → split into **delivery**.
+- item_name depends on the product, not the variant → split into **product**, keeping only product_id on product_variant.
+- Products belong to a category → split into **category**.
+
+The result is a set of clean tables where every non-key column depends on the whole key and nothing but the key.
+
+This maps directly to the 14 tables in `schema.sql`: `customer`, `address`, `staff`, `rider`, `category`, `product`, `product_variant`, `orders`, `order_item`, `payment`, `delivery`, `return_request`, `complaint`, and `review`.
+
