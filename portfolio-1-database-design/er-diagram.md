@@ -1,6 +1,5 @@
 # ThreadHaus ER Diagram
 
-GitHub renders the Mermaid diagram below. The `er-diagram.dbml` file in this folder is the version for [dbdiagram.io](https://dbdiagram.io).
 
 ```mermaid
 erDiagram
