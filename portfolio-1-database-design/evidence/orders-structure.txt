@@ -1,0 +1,23 @@
+$ sudo -u postgres psql -d threadhaus -c "\d orders"
+
+                                     Table "public.orders"
+    Column    |           Type           | Collation | Nullable |           Default            
+--------------+--------------------------+-----------+----------+------------------------------
+ order_id     | bigint                   |           | not null | generated always as identity
+ customer_id  | bigint                   |           | not null | 
+ address_id   | bigint                   |           | not null | 
+ order_date   | timestamp with time zone |           | not null | now()
+ status       | text                     |           | not null | 'pending'::text
+ total_amount | numeric(12,2)            |           | not null | 
+Indexes:
+    "orders_pkey" PRIMARY KEY, btree (order_id)
+Check constraints:
+    "orders_status_check" CHECK (status = ANY (ARRAY['pending'::text, 'paid'::text, 'processing'::text, 'shipped'::text, 'delivered'::text, 'cancelled'::text, 'returned'::text]))
+    "orders_total_amount_check" CHECK (total_amount >= 0::numeric)
+Foreign-key constraints:
+    "orders_address_id_fkey" FOREIGN KEY (address_id) REFERENCES address(address_id) ON DELETE RESTRICT
+    "orders_customer_id_fkey" FOREIGN KEY (customer_id) REFERENCES customer(customer_id) ON DELETE RESTRICT
+Referenced by:
+    TABLE "delivery" CONSTRAINT "delivery_order_id_fkey" FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE RESTRICT
+    TABLE "order_item" CONSTRAINT "order_item_order_id_fkey" FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
+    TABLE "payment" CONSTRAINT "payment_order_id_fkey" FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE RESTRICT

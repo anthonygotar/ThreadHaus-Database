@@ -1,0 +1,44 @@
+$ sudo -u postgres psql -v ON_ERROR_STOP=1 -d threadhaus -f schema.sql
+
+psql:/tmp/threadhaus_schema.sql:9: NOTICE:  table "review" does not exist, skipping
+DROP TABLE
+psql:/tmp/threadhaus_schema.sql:10: NOTICE:  table "complaint" does not exist, skipping
+DROP TABLE
+psql:/tmp/threadhaus_schema.sql:11: NOTICE:  table "return_request" does not exist, skipping
+DROP TABLE
+psql:/tmp/threadhaus_schema.sql:12: NOTICE:  table "delivery" does not exist, skipping
+DROP TABLE
+psql:/tmp/threadhaus_schema.sql:13: NOTICE:  table "payment" does not exist, skipping
+DROP TABLE
+psql:/tmp/threadhaus_schema.sql:14: NOTICE:  table "order_item" does not exist, skipping
+DROP TABLE
+psql:/tmp/threadhaus_schema.sql:15: NOTICE:  table "orders" does not exist, skipping
+DROP TABLE
+psql:/tmp/threadhaus_schema.sql:16: NOTICE:  table "product_variant" does not exist, skipping
+DROP TABLE
+psql:/tmp/threadhaus_schema.sql:17: NOTICE:  table "product" does not exist, skipping
+DROP TABLE
+psql:/tmp/threadhaus_schema.sql:18: NOTICE:  table "category" does not exist, skipping
+DROP TABLE
+psql:/tmp/threadhaus_schema.sql:19: NOTICE:  table "address" does not exist, skipping
+DROP TABLE
+psql:/tmp/threadhaus_schema.sql:20: NOTICE:  table "staff" does not exist, skipping
+DROP TABLE
+psql:/tmp/threadhaus_schema.sql:21: NOTICE:  table "rider" does not exist, skipping
+DROP TABLE
+psql:/tmp/threadhaus_schema.sql:22: NOTICE:  table "customer" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE

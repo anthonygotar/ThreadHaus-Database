@@ -1,0 +1,20 @@
+$ sudo -u postgres psql -d threadhaus -c "\dt"
+
+               List of tables
+ Schema |      Name       | Type  |  Owner   
+--------+-----------------+-------+----------
+ public | address         | table | postgres
+ public | category        | table | postgres
+ public | complaint       | table | postgres
+ public | customer        | table | postgres
+ public | delivery        | table | postgres
+ public | order_item      | table | postgres
+ public | orders          | table | postgres
+ public | payment         | table | postgres
+ public | product         | table | postgres
+ public | product_variant | table | postgres
+ public | return_request  | table | postgres
+ public | review          | table | postgres
+ public | rider           | table | postgres
+ public | staff           | table | postgres
+(14 rows)

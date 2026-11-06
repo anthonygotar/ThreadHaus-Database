@@ -1,0 +1,24 @@
+$ sudo -u postgres psql -d threadhaus -c "\d product_variant"
+
+                               Table "public.product_variant"
+   Column   |           Type           | Collation | Nullable |           Default            
+------------+--------------------------+-----------+----------+------------------------------
+ variant_id | bigint                   |           | not null | generated always as identity
+ product_id | bigint                   |           | not null | 
+ sku        | text                     |           | not null | 
+ size       | text                     |           | not null | 
+ colour     | text                     |           | not null | 
+ price      | numeric(12,2)            |           | not null | 
+ stock_qty  | integer                  |           | not null | 0
+ deleted_at | timestamp with time zone |           |          | 
+Indexes:
+    "product_variant_pkey" PRIMARY KEY, btree (variant_id)
+    "product_variant_product_id_size_colour_key" UNIQUE CONSTRAINT, btree (product_id, size, colour)
+    "product_variant_sku_key" UNIQUE CONSTRAINT, btree (sku)
+Check constraints:
+    "product_variant_price_check" CHECK (price >= 0::numeric)
+    "product_variant_stock_qty_check" CHECK (stock_qty >= 0)
+Foreign-key constraints:
+    "product_variant_product_id_fkey" FOREIGN KEY (product_id) REFERENCES product(product_id) ON DELETE RESTRICT
+Referenced by:
+    TABLE "order_item" CONSTRAINT "order_item_variant_id_fkey" FOREIGN KEY (variant_id) REFERENCES product_variant(variant_id) ON DELETE RESTRICT
