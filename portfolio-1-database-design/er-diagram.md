@@ -98,7 +98,7 @@ erDiagram
 
     delivery {
         bigint delivery_id PK
-        bigint order_id FK UK
+        bigint order_id FK
         bigint rider_id FK
         text status
         timestamptz assigned_at
