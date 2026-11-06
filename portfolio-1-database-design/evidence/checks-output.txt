@@ -1,0 +1,36 @@
+$ psql -v ON_ERROR_STOP=1 -f checks.sql
+
+-- a. Row counts for all 14 tables
+   table_name    | row_count
+-----------------+-----------
+ address         |         5
+ category        |         4
+ complaint       |         2
+ customer        |         4
+ delivery        |         3
+ order_item      |         5
+ orders          |         3
+ payment         |         3
+ product         |         4
+ product_variant |         9
+ return_request  |         1
+ review          |         3
+ rider           |         3
+ staff           |         3
+(14 rows)
+
+-- b. Stored total_amount vs calculated sum of order items
+ order_id | stored_total | calculated_total | difference
+----------+--------------+------------------+------------
+        1 |     22000.00 |         22000.00 |       0.00
+        2 |     44000.00 |         44000.00 |       0.00
+        3 |     16400.00 |         16400.00 |       0.00
+(3 rows)
+
+-- c. Orders with customer name, payment status, delivery status
+ order_id |   customer    | order_status | total_amount | payment_status | payment_method | delivery_status
+----------+---------------+--------------+--------------+----------------+----------------+-----------------
+        1 | Funmi Adebayo | delivered    |     22000.00 | successful     | card           | delivered
+        2 | Kelechi Ibe   | shipped      |     44000.00 | successful     | bank_transfer  | in_transit
+        3 | Hadiza Musa   | pending      |     16400.00 |                |                | pending
+(3 rows)
