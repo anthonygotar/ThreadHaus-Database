@@ -15,3 +15,10 @@ CREATE INDEX idx_orders_order_date ON orders (order_date);
 -- Baseline median: 20.85 ms. After: 0.73 ms (-97%). Index Scan used.
 CREATE INDEX idx_orders_awaiting ON orders (order_date) WHERE status IN ('paid', 'processing');
 
+-- d. Q4: monthly sales report – partial index on payment(paid_at) INCLUDE (amount)
+-- TESTED AND DROPPED. Planner chose Seq Scan over this index on every run.
+-- Median stayed at 99.62 ms vs baseline 98.01 ms — no gain, slight regression.
+-- Reason: Q4 reads ~95% of the payment table (85k of 89k rows). A full scan is
+-- cheaper than an index scan when selectivity is that low.
+-- DROP INDEX idx_payment_success_paid_at;
+
