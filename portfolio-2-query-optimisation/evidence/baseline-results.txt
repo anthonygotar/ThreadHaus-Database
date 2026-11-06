@@ -1,0 +1,131 @@
+$ psql -d threadhaus_perf -f queries.sql
+(rows limited to 20 where query returns more; noted per query)
+
+=== Q1: Catalogue search ===
+(73 rows total; showing first 20)
+    product_name    |    brand    |     sku      | size | colour |  price   | stock_qty
+--------------------+-------------+--------------+------+--------+----------+-----------
+ Native Senator 714 | AsoOke Plus | TH-714-M-BLK | M    | Black  |  5787.15 |        71
+ Native Senator 474 | AsoOke Plus | TH-474-M-BLK | M    | Black  |  6627.63 |        55
+ Joggers 754        | AsoOke Plus | TH-754-M-BLK | M    | Black  |  7297.39 |        44
+ Gown 779           | AsoOke Plus | TH-779-M-BLK | M    | Black  |  7793.70 |        95
+ Gown 459           | AsoOke Plus | TH-459-M-BLK | M    | Black  |  8024.10 |       114
+ Gown 379           | AsoOke Plus | TH-379-M-BLK | M    | Black  |  8915.76 |       126
+ Joggers 594        | AsoOke Plus | TH-594-M-BLK | M    | Black  |  9480.91 |         7
+ Agbada Set 659     | AsoOke Plus | TH-659-M-BLK | M    | Black  |  9828.42 |       163
+ Ankara Shirt 529   | AsoOke Plus | TH-529-M-BLK | M    | Black  | 11435.42 |       124
+ Gown 699           | AsoOke Plus | TH-699-M-BLK | M    | Black  | 12954.11 |       180
+ Ankara Shirt 689   | AsoOke Plus | TH-689-M-BLK | M    | Black  | 14824.04 |        88
+ Trousers 89        | AsoOke Plus | TH-89-M-BLK  | M    | Black  | 15911.21 |       136
+ Joggers 434        | AsoOke Plus | TH-434-M-BLK | M    | Black  | 16632.79 |       111
+ Agbada Set 499     | AsoOke Plus | TH-499-M-BLK | M    | Black  | 16794.58 |        47
+ Agbada Set 179     | AsoOke Plus | TH-179-M-BLK | M    | Black  | 16831.13 |       195
+ Agbada Set 259     | AsoOke Plus | TH-259-M-BLK | M    | Black  | 17857.99 |       189
+ Gown 939           | AsoOke Plus | TH-939-M-BLK | M    | Black  | 18128.28 |       199
+ Native Senator 554 | AsoOke Plus | TH-554-M-BLK | M    | Black  | 18580.92 |       148
+ Gown 219           | AsoOke Plus | TH-219-M-BLK | M    | Black  | 19242.19 |        29
+ Gown 619           | AsoOke Plus | TH-619-M-BLK | M    | Black  | 21869.14 |       103
+(20 of 73 rows shown)
+
+=== Q2: Order history (customer_id = 4790) ===
+(10 rows — all shown)
+ order_id |          order_date           |   status   | total_amount | item_count | items_total
+----------+-------------------------------+------------+--------------+------------+-------------
+    14790 | 2026-11-03 04:25:21.233478+01 | shipped    |    127495.93 |          3 |   127495.93
+    24790 | 2026-09-15 00:15:40.385127+01 | delivered  |    292108.51 |          3 |   292108.51
+    44790 | 2026-08-26 16:01:32.03231+01  | delivered  |    257100.21 |          3 |   257100.21
+    54790 | 2026-07-12 02:15:07.909704+01 | processing |    279799.57 |          3 |   279799.57
+    74790 | 2026-07-06 14:28:52.540264+01 | delivered  |    320943.09 |          3 |   320943.09
+     4790 | 2026-06-01 16:07:02.123114+01 | cancelled  |    180948.39 |          3 |   180948.39
+    34790 | 2026-05-17 10:30:54.274176+01 | delivered  |    318834.74 |          3 |   318834.74
+    84790 | 2026-05-04 04:09:16.830487+01 | delivered  |    320943.09 |          3 |   320943.09
+    64790 | 2026-03-24 18:15:21.90545+01  | cancelled  |    294216.86 |          3 |   294216.86
+    94790 | 2026-03-10 06:52:21.130655+01 | delivered  |    203647.75 |          3 |   203647.75
+(10 rows)
+
+=== Q3: Best sellers (last 30 days, excl. cancelled) ===
+(10 rows — all shown)
+ variant_id |    product_name    | size | colour | total_qty_sold
+------------+--------------------+------+--------+----------------
+       3706 | Kaftan 742         | S    | Black  |             45
+       3821 | Hoodie 765         | S    | Blue   |             33
+         66 | Jeans 14           | S    | Green  |             33
+       2866 | Jeans 574          | S    | Green  |             33
+       3469 | Kaftan 694         | XL   | Red    |             32
+       2046 | Native Senator 410 | S    | Blue   |             32
+       2566 | Joggers 514        | S    | Green  |             31
+       2987 | Kaftan 598         | M    | White  |             31
+       2505 | Skirt 501          | XXL  | Red    |             31
+        953 | T-Shirt 191        | L    | Black  |             30
+(10 rows)
+
+=== Q4: Monthly sales report ===
+(13 rows — all shown)
+         month          | payment_count | total_revenue
+------------------------+---------------+---------------
+ 2026-11-01 00:00:00+01 |          1292 |  301823870.67
+ 2026-10-01 00:00:00+01 |          7311 | 1694166829.91
+ 2026-09-01 00:00:00+01 |          6906 | 1580900678.27
+ 2026-08-01 00:00:00+01 |          7193 | 1687995714.49
+ 2026-07-01 00:00:00+01 |          7198 | 1689471240.35
+ 2026-06-01 00:00:00+01 |          7208 | 1661541939.82
+ 2026-05-01 00:00:00+01 |          7225 | 1673411821.11
+ 2026-04-01 00:00:00+01 |          6974 | 1611843527.52
+ 2026-03-01 00:00:00+01 |          7173 | 1663918573.51
+ 2026-02-01 00:00:00+01 |          6397 | 1489716012.14
+ 2026-01-01 00:00:00+01 |          7222 | 1696185113.49
+ 2025-12-01 00:00:00+01 |          7191 | 1676280788.21
+ 2025-11-01 00:00:00+01 |          5782 | 1342342552.04
+(13 rows)
+
+=== Q5: Orders awaiting a rider ===
+(14,003 rows total; showing first 20)
+ order_id | customer_id |          order_date           |   status   | total_amount
+----------+-------------+-------------------------------+------------+--------------
+    63891 |        3891 | 2025-11-06 11:23:34.503995+01 | processing |    219349.49
+    28460 |        8460 | 2025-11-06 11:39:53.724439+01 | processing |     86681.03
+    20053 |          53 | 2025-11-06 11:46:07.106701+01 | processing |    209794.31
+    43817 |        3817 | 2025-11-06 12:37:05.532641+01 | processing |    503726.81
+    26283 |        6283 | 2025-11-06 12:39:45.723748+01 | processing |    178691.47
+     8744 |        8744 | 2025-11-06 13:03:02.73226+01  | processing |     13254.00
+    83513 |        3513 | 2025-11-06 13:18:52.039019+01 | processing |    461136.30
+    78557 |        8557 | 2025-11-06 13:28:34.298156+01 | paid       |    512168.90
+    62364 |        2364 | 2025-11-06 13:42:20.29761+01  | processing |     74988.06
+    94720 |        4720 | 2025-11-06 13:45:52.346081+01 | processing |     12930.34
+    27702 |        7702 | 2025-11-06 14:29:09.887558+01 | processing |    105859.42
+    25785 |        5785 | 2025-11-06 15:02:01.871779+01 | processing |    508389.38
+    74384 |        4384 | 2025-11-06 17:06:56.691048+01 | processing |    289665.87
+    23830 |        3830 | 2025-11-06 18:22:43.312386+01 | processing |    584716.86
+    37238 |        7238 | 2025-11-06 19:40:32.078675+01 | paid       |    114061.94
+    41100 |        1100 | 2025-11-06 19:41:49.494535+01 | processing |     78946.71
+    94893 |        4893 | 2025-11-06 20:21:29.499634+01 | processing |    350869.77
+    23407 |        3407 | 2025-11-06 20:46:35.815214+01 | processing |    207485.37
+    57715 |        7715 | 2025-11-06 21:05:11.117825+01 | processing |     59818.89
+    57125 |        7125 | 2025-11-06 21:08:03.587878+01 | paid       |    328006.44
+(20 of 14003 rows shown)
+
+=== Q6: Product ratings (min 5 reviews, top 20) ===
+(20 rows — all shown)
+ product_id |    product_name    |     brand     | avg_rating | review_count
+------------+--------------------+---------------+------------+--------------
+        508 | Jacket 508         | Naija Threads |       4.70 |           10
+        700 | Jacket 700         | KachiWear     |       4.60 |           10
+        746 | Native Senator 746 | ThreadHaus    |       4.60 |           10
+        850 | Joggers 850        | KachiWear     |       4.60 |           10
+        957 | Hoodie 957         | Lagos Stitch  |       4.60 |           10
+        251 | Gown 251           | ThreadHaus    |       4.60 |           10
+        807 | Shorts 807         | Lagos Stitch  |       4.50 |           10
+        674 | Joggers 674        | AsoOke Plus   |       4.50 |           10
+        851 | Agbada Set 851     | ThreadHaus    |       4.50 |           10
+        997 | Skirt 997          | Lagos Stitch  |       4.50 |           10
+        502 | Kaftan 502         | Lagos Stitch  |       4.50 |           10
+        977 | Ankara Shirt 977   | Lagos Stitch  |       4.50 |           10
+        825 | Trousers 825       | KachiWear     |       4.50 |           10
+        434 | Joggers 434        | AsoOke Plus   |       4.50 |           10
+        499 | Agbada Set 499     | AsoOke Plus   |       4.50 |           10
+        396 | Jacket 396         | ThreadHaus    |       4.50 |           10
+        374 | Kaftan 374         | AsoOke Plus   |       4.50 |           10
+        531 | Agbada Set 531     | ThreadHaus    |       4.40 |           10
+        976 | Wrapper Set 976    | ThreadHaus    |       4.40 |           10
+         39 | Shorts 39          | AsoOke Plus   |       4.40 |           10
+(20 rows)
