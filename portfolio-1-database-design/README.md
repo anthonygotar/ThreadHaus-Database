@@ -145,3 +145,22 @@ CASCADE is used only on `address.customer_id` and `order_item.order_id`. Everyth
 **NOT NULL:** All required columns are NOT NULL. Nullable columns are those that are intentionally optional: `address.is_default` has a default, `delivery.rider_id` and `complaint.staff_id` and `return_request.staff_id` are nullable until assigned, `product.description`, `product.brand`, `payment.reference`, `payment.paid_at`, `review.comment`, and all `deleted_at` columns.
 
 **Constraint tests:** `constraint-tests.sql` runs five statements that must fail: negative `stock_qty`, a rating of 6, a duplicate customer email, deleting a customer who has orders (RESTRICT), and a second delivery for an order that already has one. The output is in `evidence/constraint-tests-output.txt`.
+
+---
+
+## 7. Design Choices
+
+**Identity keys over UUIDs.** I used `BIGINT GENERATED ALWAYS AS IDENTITY` for every primary key. Identity integers are smaller, index faster, and are easier to read in queries. UUIDs would be better for distributed systems where rows are generated on multiple nodes, but ThreadHaus is a single PostgreSQL instance.
+
+**NUMERIC(12,2) for money.** Floating-point types (FLOAT, DOUBLE) cannot represent all decimal fractions exactly and would introduce rounding errors in price calculations. `NUMERIC(12,2)` stores exact decimal values. 12 digits allows prices up to ₦9,999,999,999.99, which covers the range needed.
+
+**CHECK constraints instead of lookup tables for statuses.** Status values like `pending`, `shipped`, `delivered` are short, fixed lists. A separate lookup table would add joins to every query that reads status. CHECK constraints enforce the same rule with less complexity. If the list needs to grow, altering a CHECK is straightforward.
+
+**Soft delete on five tables only.** `customer`, `product`, `product_variant`, `staff`, and `rider` have a `deleted_at TIMESTAMPTZ` column. Soft delete means a deactivated customer's order history is still readable, and a discontinued product variant still shows correctly on old order items. The other tables (orders, payments, deliveries, etc.) are not soft-deleted because those records are audit-critical and should not be hidden.
+
+**order_item.unit_price as a price snapshot.** `product_variant.price` can change over time. If an order item referenced the live price, old orders would silently show the wrong amount. Storing `unit_price` on `order_item` at the time of purchase freezes the price paid. This is also why `orders.total_amount` is denormalised — it records the total at order time.
+
+**Payments separate from orders.** A customer might fail one payment and succeed on a second attempt. Keeping payments in their own table means every attempt is recorded with its status and gateway reference. The orders table only tracks the order lifecycle; the payment table tracks the money.
+
+**Table names orders and return_request.** `ORDER` and `RETURN` are reserved words in SQL. Using them as table names without quoting causes parse errors. I named the tables `orders` and `return_request` to avoid the conflict entirely, so queries do not need quoted identifiers.
+
