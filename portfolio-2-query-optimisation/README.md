@@ -9,7 +9,7 @@ Anthony Gotar
 
 I used a separate database called `threadhaus_perf` for this portfolio. I kept it separate from `threadhaus` (the portfolio 1 database) so that the bulk test data did not interfere with the sample data from portfolio 1, and so I could drop and recreate it freely without touching any schema work.
 
-PostgreSQL version installed: **18.6** (Ubuntu 18.6-0ubuntu0.26.04.1).
+PostgreSQL version installed: **18.6**.
 
 The database was loaded with `bulk-data.sql`, which generates all data in SQL using `generate_series`, `random()`, and `md5()`. No external files. `setseed(0.42)` at the top makes the data repeatable.
 
@@ -65,4 +65,38 @@ Baseline plans were captured with `EXPLAIN (ANALYZE, BUFFERS)` before any manual
 | Q6 | 9.13 | Seq Scan on review (10,000 rows), Seq Scan on product (1,000 rows); Hash Join; HashAggregate |
 
 Three things stood out in the baseline plans. Q2 scanned all 100,000 orders to find 10 rows for a single customer — the orders table had no index on customer_id. Q3 and Q4 were the slowest: Q3 read all 250,000 order_item rows in every execution, and Q4 spilled its sort to disk (external merge, 2,248 kB) because the default work_mem of 4 MB was not enough to hold 85,000 payment rows in memory. Q5 used a Parallel Seq Scan even though only 14,003 of 100,000 orders matched the filter — about 14% selectivity, enough for an index to help.
+
+
+---
+
+## d. Indexes Tried
+
+9 indexes were tested in total. Full details including dropped index reasons are in `indexes.sql`.
+
+| Index | Target query | What happened | Kept? | Reason |
+|---|---|---|---|---|
+| `idx_orders_customer_date` on orders(customer_id, order_date DESC) | Q2 | Bitmap Index Scan replaced Seq Scan. 100k→10 rows. | **Kept** | 16.89 ms → 0.80 ms (−95%) |
+| `idx_orders_order_date` on orders(order_date) | Q3 | Bitmap Index Scan on orders side. Seq Scan on order_item unchanged. | **Kept** | 112.24 ms → 90.11 ms (−20%) |
+| `idx_orders_awaiting` partial on orders(order_date) WHERE status IN ('paid','processing') | Q5 | Index Scan replaced Parallel Seq Scan immediately. | **Kept** | 20.85 ms → 0.73 ms (−97%) |
+| `idx_variant_instock` partial on product_variant(size, colour) WHERE stock_qty > 0 AND deleted_at IS NULL | Q1 | Bitmap Index Scan. Confirmed by 10-run re-test in q1-retest.txt. | **Kept** | 2.62 ms → 1.39 ms (−47%) per 10-run re-test |
+| `idx_payment_success_paid_at` partial on payment(paid_at) INCLUDE (amount) | Q4 | Planner chose Seq Scan on every run. | **Dropped** | Query reads 95% of payment table (85k of 89k rows). Seq scan beats index at that selectivity. |
+| `idx_review_product` on review(product_id) INCLUDE (rating) | Q6 | Planner chose Seq Scan. Median regressed to 13.02 ms. | **Dropped** | review table is 10k rows; seq scan reads the whole table in ~114 pages, faster than index overhead. |
+| `idx_variant_product` on product_variant(product_id) | Q1 | Not used by planner. | **Dropped** | product_variant (5k rows) is too small for index to help. |
+| `idx_product_category` on product(category_id) | Q1 | Not used by planner. | **Dropped** | product (1k rows) is too small. |
+| `idx_order_item_variant` on order_item(variant_id) | Q3 extra | Planner kept Seq Scan. Median regressed to ~95 ms. | **Dropped** | Q3 needs most of order_item (250k rows). Hash join with Seq Scan beats nested loop with index. |
+
+---
+
+## e. Results
+
+Final before and after table. Q1 median from `evidence/q1-retest.txt` (10 runs). Q2–Q6 from step 8 (5 runs).
+
+| Query | Baseline median (ms) | After median (ms) | Change % | Index used |
+|---|---|---|---|---|
+| Q1 Catalogue search | 1.71 | 1.39 | **−19%** | idx_variant_instock |
+| Q2 Order history | 16.89 | 0.80 | **−95%** | idx_orders_customer_date |
+| Q3 Best sellers | 112.24 | 90.11 | **−20%** | idx_orders_order_date |
+| Q4 Monthly sales | 98.01 | 98.01 | 0% | none |
+| Q5 Awaiting rider | 20.85 | 0.73 | **−97%** | idx_orders_awaiting |
+| Q6 Product ratings | 9.13 | 9.13 | 0% | none |
 
