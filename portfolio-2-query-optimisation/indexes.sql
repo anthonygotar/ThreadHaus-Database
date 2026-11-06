@@ -22,3 +22,10 @@ CREATE INDEX idx_orders_awaiting ON orders (order_date) WHERE status IN ('paid',
 -- cheaper than an index scan when selectivity is that low.
 -- DROP INDEX idx_payment_success_paid_at;
 
+-- e. Q6: product ratings – index on review(product_id) INCLUDE (rating)
+-- TESTED AND DROPPED. Planner chose Seq Scan on review in every run.
+-- Median 13.02 ms vs baseline 9.13 ms — actually slower.
+-- Reason: review table is small (10k rows, 114 pages). Sequential scan is faster
+-- than an index scan when the whole table fits in a few buffer reads.
+-- DROP INDEX idx_review_product;
+
