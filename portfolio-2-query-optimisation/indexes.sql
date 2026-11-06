@@ -29,3 +29,12 @@ CREATE INDEX idx_orders_awaiting ON orders (order_date) WHERE status IN ('paid',
 -- than an index scan when the whole table fits in a few buffer reads.
 -- DROP INDEX idx_review_product;
 
+-- f. Q1: catalogue search – three indexes tested together
+-- idx_variant_instock KEPT. Used via Bitmap Index Scan. Baseline 1.71 ms, after 1.93 ms —
+--   within noise on a fast query, but index IS used and reduces scanned rows from 5000 to 198.
+-- idx_variant_product TESTED AND DROPPED. Not used by planner (product_variant is small).
+-- idx_product_category TESTED AND DROPPED. Not used by planner (product table is small).
+CREATE INDEX idx_variant_instock ON product_variant (size, colour) WHERE stock_qty > 0 AND deleted_at IS NULL;
+-- DROP INDEX idx_variant_product;
+-- DROP INDEX idx_product_category;
+
