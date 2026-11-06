@@ -1,0 +1,50 @@
+=== STOCK BEFORE ===
+ variant_id |     sku      | stock_qty 
+------------+--------------+-----------
+          3 | TH-JOG-M-BLK |        30
+          8 | TH-ANB-M-YEL |        22
+(2 rows)
+
+BEGIN
+INSERT 0 1
+--- Order inserted with order_id :order_id ---
+INSERT 0 1
+INSERT 0 1
+UPDATE 1
+UPDATE 1
+UPDATE 1
+INSERT 0 1
+UPDATE 1
+COMMIT
+=== ORDER AFTER COMMIT ===
+ order_id | status | total_amount |   customer    
+----------+--------+--------------+---------------
+        4 | paid   |     21000.00 | Seun Ogundimu
+(1 row)
+
+=== ORDER ITEMS ===
+ order_item_id |     sku      | quantity | unit_price | line_total 
+---------------+--------------+----------+------------+------------
+             6 | TH-JOG-M-BLK |        2 |    6500.00 |   13000.00
+             7 | TH-ANB-M-YEL |        1 |    8000.00 |    8000.00
+(2 rows)
+
+=== PAYMENT ===
+ payment_id | method |  amount  |   status   |  reference   
+------------+--------+----------+------------+--------------
+          4 | card   | 21000.00 | successful | PAY-COMMIT-4
+(1 row)
+
+=== STOCK AFTER ===
+ variant_id |     sku      | stock_qty 
+------------+--------------+-----------
+          3 | TH-JOG-M-BLK |        28
+          8 | TH-ANB-M-YEL |        21
+(2 rows)
+
+=== TOTAL CHECK: stored total vs item sum (difference must be 0) ===
+ stored_total | item_sum | difference 
+--------------+----------+------------
+     21000.00 | 21000.00 |       0.00
+(1 row)
+
