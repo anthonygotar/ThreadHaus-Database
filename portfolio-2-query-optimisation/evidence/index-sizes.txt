@@ -1,0 +1,17 @@
+Index sizes — threadhaus_perf after all kept indexes created.
+
+Kept indexes:
+  idx_orders_customer_date   3104 kB
+  idx_orders_order_date      2208 kB
+  idx_orders_awaiting         328 kB
+  idx_variant_instock          56 kB
+
+Five biggest tables for comparison:
+  order_item    16 MB
+  orders        15 MB
+  payment     9144 kB
+  delivery    5976 kB
+  customer    1312 kB
+
+The three orders indexes together (5640 kB) are about 18% of the orders table size (15 MB).
+idx_variant_instock (56 kB) is tiny relative to product_variant.

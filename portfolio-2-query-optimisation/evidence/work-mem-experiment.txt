@@ -1,0 +1,32 @@
+work_mem experiment — Q4 Monthly sales report
+
+Q4 at baseline (default work_mem = 4MB):
+  Sort Method: external merge  Disk: 2248kB
+  Execution Time: ~98 ms (median of 3 runs)
+
+Q4 with SET work_mem = '64MB' (session only, no config change):
+
+EXPLAIN output (representative run):
+  GroupAggregate  (actual time=59.019..87.289 rows=13)
+    ->  Sort  (actual time=58.525..69.014 rows=85072)
+          Sort Key: (date_trunc('month', paid_at)) DESC
+          Sort Method: quicksort  Memory: 6383kB    <-- no disk spill
+          ->  Seq Scan on payment  (actual time=0.045..39.457 rows=85072)
+                Filter: (status = 'successful')
+                Rows Removed by Filter: 4259
+  Execution Time: 88.014 ms
+
+5-run timings with work_mem = '64MB':
+  Run 1: 90.40 ms
+  Run 2: 99.06 ms
+  Run 3: 107.41 ms
+  (connection dropped after 3 — enough to confirm the pattern)
+  Median: ~99 ms
+
+Result:
+  - External merge (disk spill) disappears. Sort uses 6383 kB of memory instead of spilling 2248 kB to disk.
+  - Execution time does NOT improve significantly (98 ms baseline vs ~99 ms with 64MB).
+  - Conclusion: the bottleneck is the sequential scan reading 85k rows from payment, not the sort.
+    Eliminating the disk spill saves I/O on the sort but the seq scan dominates.
+    A larger work_mem is worthwhile to avoid disk I/O under concurrent load, but does not
+    speed up this query on an otherwise idle machine.

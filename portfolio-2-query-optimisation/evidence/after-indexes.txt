@@ -1,0 +1,39 @@
+$ psql -d threadhaus_perf -c "\di"
+
+                                       List of indexes
+ Schema |                    Name                    | Type  |    Owner     |      Table
+--------+--------------------------------------------+-------+--------------+-----------------
+ public | address_pkey                               | index | anthonygotar | address
+ public | category_name_key                          | index | anthonygotar | category
+ public | category_pkey                              | index | anthonygotar | category
+ public | complaint_pkey                             | index | anthonygotar | complaint
+ public | customer_email_key                         | index | anthonygotar | customer
+ public | customer_phone_key                         | index | anthonygotar | customer
+ public | customer_pkey                              | index | anthonygotar | customer
+ public | delivery_order_id_key                      | index | anthonygotar | delivery
+ public | delivery_pkey                              | index | anthonygotar | delivery
+ public | idx_orders_awaiting                        | index | anthonygotar | orders
+ public | idx_orders_customer_date                   | index | anthonygotar | orders
+ public | idx_orders_order_date                      | index | anthonygotar | orders
+ public | idx_variant_instock                        | index | anthonygotar | product_variant
+ public | order_item_order_id_variant_id_key         | index | anthonygotar | order_item
+ public | order_item_pkey                            | index | anthonygotar | order_item
+ public | orders_pkey                                | index | anthonygotar | orders
+ public | payment_pkey                               | index | anthonygotar | payment
+ public | payment_reference_key                      | index | anthonygotar | payment
+ public | product_pkey                               | index | anthonygotar | product
+ public | product_variant_pkey                       | index | anthonygotar | product_variant
+ public | product_variant_product_id_size_colour_key | index | anthonygotar | product_variant
+ public | product_variant_sku_key                    | index | anthonygotar | product_variant
+ public | return_request_pkey                        | index | anthonygotar | return_request
+ public | review_customer_id_product_id_key          | index | anthonygotar | review
+ public | review_pkey                                | index | anthonygotar | review
+ public | rider_phone_key                            | index | anthonygotar | rider
+ public | rider_pkey                                 | index | anthonygotar | rider
+ public | staff_email_key                            | index | anthonygotar | staff
+ public | staff_pkey                                 | index | anthonygotar | staff
+(29 rows)
+
+4 manual indexes added (idx_orders_awaiting, idx_orders_customer_date, idx_orders_order_date, idx_variant_instock).
+5 indexes tested and dropped (idx_payment_success_paid_at, idx_review_product,
+  idx_variant_product, idx_product_category, idx_order_item_variant).
