@@ -47,3 +47,101 @@ The diagram is in `er-diagram.md` and renders directly on GitHub. An exported im
 
 **Note on delivery.order_id:** In the Mermaid diagram, `delivery.order_id` is marked only `FK`. Mermaid rejects the combination `FK UK` and throws a parse error. In `schema.sql` the column has `UNIQUE (order_id)`, so an order has at most one delivery. The one-to-zero-or-one cardinality on the relationship line (`||--o|`) also reflects this.
 
+
+---
+
+## 4. Relational Schema
+
+| Table | Purpose |
+|---|---|
+| `customer` | Stores registered customer accounts. |
+| `address` | Delivery addresses belonging to a customer. A customer can have many. |
+| `staff` | Internal staff accounts (admin, manager, support). |
+| `rider` | Delivery riders and their availability status. |
+| `category` | Product categories. Self-referencing for sub-categories. |
+| `product` | Products in the catalogue, linked to a category. |
+| `product_variant` | One row per SKU (size + colour combination) for each product. |
+| `orders` | An order placed by a customer, linked to a delivery address. |
+| `order_item` | Line items within an order. Each row is one variant at a recorded price. |
+| `payment` | Payment attempts against an order. One order can have many payments. |
+| `delivery` | Delivery assignment for an order. One order has at most one delivery. |
+| `return_request` | A return raised against a specific order item. |
+| `complaint` | A complaint raised by a customer, optionally assigned to a staff member. |
+| `review` | A product review written by a customer. One review per customer per product. |
+
+**Main relationships:**
+
+A customer has many addresses and many orders. Each order belongs to one customer and one address. An order has at least one order item, and each item references one product variant. A product has many variants (one per size/colour). A product belongs to one category; categories can be nested. An order can have many payments (for example, a failed attempt followed by a successful one). Each order has at most one delivery row, enforced by a unique constraint on `delivery.order_id`. A delivery is assigned to one rider. A return request is raised against one order item. Complaints and return requests can be assigned to one staff member.
+
+---
+
+## 5. Keys
+
+**Primary keys:** Every table uses `BIGINT GENERATED ALWAYS AS IDENTITY`. PostgreSQL generates the value; application code cannot override it.
+
+**Foreign keys and delete rules** (read from `schema.sql`):
+
+| FK column | References | On delete |
+|---|---|---|
+| `address.customer_id` | `customer.customer_id` | CASCADE |
+| `category.parent_category_id` | `category.category_id` | RESTRICT |
+| `product.category_id` | `category.category_id` | RESTRICT |
+| `product_variant.product_id` | `product.product_id` | RESTRICT |
+| `orders.customer_id` | `customer.customer_id` | RESTRICT |
+| `orders.address_id` | `address.address_id` | RESTRICT |
+| `order_item.order_id` | `orders.order_id` | CASCADE |
+| `order_item.variant_id` | `product_variant.variant_id` | RESTRICT |
+| `payment.order_id` | `orders.order_id` | RESTRICT |
+| `delivery.order_id` | `orders.order_id` | RESTRICT |
+| `delivery.rider_id` | `rider.rider_id` | RESTRICT (nullable) |
+| `return_request.order_item_id` | `order_item.order_item_id` | RESTRICT |
+| `return_request.staff_id` | `staff.staff_id` | RESTRICT (nullable) |
+| `complaint.customer_id` | `customer.customer_id` | RESTRICT |
+| `complaint.staff_id` | `staff.staff_id` | RESTRICT (nullable) |
+| `review.customer_id` | `customer.customer_id` | RESTRICT |
+| `review.product_id` | `product.product_id` | RESTRICT |
+
+CASCADE is used only on `address.customer_id` and `order_item.order_id`. Everything else is RESTRICT.
+
+**Unique constraints** (read from `schema.sql`):
+
+| Table | Unique constraint |
+|---|---|
+| `customer` | `email`, `phone` (separate constraints) |
+| `staff` | `email` |
+| `rider` | `phone` |
+| `category` | `name` |
+| `product_variant` | `sku`; composite `(product_id, size, colour)` |
+| `order_item` | composite `(order_id, variant_id)` |
+| `payment` | `reference` |
+| `delivery` | `order_id` (enforces one delivery per order) |
+| `review` | composite `(customer_id, product_id)` |
+
+---
+
+## 6. Constraints
+
+**CHECK constraints** (read from `schema.sql`):
+
+| Table | Column | Rule |
+|---|---|---|
+| `staff` | `role` | IN ('admin', 'manager', 'support') |
+| `product` | `base_price` | >= 0 |
+| `product_variant` | `price` | >= 0 |
+| `product_variant` | `stock_qty` | >= 0 |
+| `orders` | `status` | IN ('pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'returned') |
+| `orders` | `total_amount` | >= 0 |
+| `order_item` | `quantity` | > 0 |
+| `order_item` | `unit_price` | >= 0 |
+| `payment` | `method` | IN ('card', 'bank_transfer', 'ussd', 'cash_on_delivery') |
+| `payment` | `amount` | > 0 |
+| `payment` | `status` | IN ('pending', 'successful', 'failed', 'refunded') |
+| `delivery` | `status` | IN ('pending', 'assigned', 'picked_up', 'in_transit', 'delivered', 'failed') |
+| `return_request` | `status` | IN ('requested', 'approved', 'rejected', 'received', 'refunded') |
+| `return_request` | `refund_amount` | >= 0 |
+| `complaint` | `status` | IN ('open', 'in_progress', 'resolved', 'closed') |
+| `review` | `rating` | BETWEEN 1 AND 5 |
+
+**NOT NULL:** All required columns are NOT NULL. Nullable columns are those that are intentionally optional: `address.is_default` has a default, `delivery.rider_id` and `complaint.staff_id` and `return_request.staff_id` are nullable until assigned, `product.description`, `product.brand`, `payment.reference`, `payment.paid_at`, `review.comment`, and all `deleted_at` columns.
+
+**Constraint tests:** `constraint-tests.sql` runs five statements that must fail: negative `stock_qty`, a rating of 6, a duplicate customer email, deleting a customer who has orders (RESTRICT), and a second delivery for an order that already has one. The output is in `evidence/constraint-tests-output.txt`.
