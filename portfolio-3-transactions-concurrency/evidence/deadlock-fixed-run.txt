@@ -1,0 +1,186 @@
+=== Resetting database ===
+Dropping and recreating threadhaus...
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+DROP DATABASE
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+CREATE DATABASE
+Loading schema...
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:9: NOTICE:  table "review" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:10: NOTICE:  table "complaint" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:11: NOTICE:  table "return_request" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:12: NOTICE:  table "delivery" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:13: NOTICE:  table "payment" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:14: NOTICE:  table "order_item" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:15: NOTICE:  table "orders" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:16: NOTICE:  table "product_variant" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:17: NOTICE:  table "product" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:18: NOTICE:  table "category" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:19: NOTICE:  table "address" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:20: NOTICE:  table "staff" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:21: NOTICE:  table "rider" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:22: NOTICE:  table "customer" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+Loading sample data...
+INSERT 0 3
+INSERT 0 3
+INSERT 0 4
+INSERT 0 5
+INSERT 0 4
+INSERT 0 4
+INSERT 0 9
+INSERT 0 3
+INSERT 0 5
+INSERT 0 3
+INSERT 0 3
+INSERT 0 1
+INSERT 0 2
+INSERT 0 3
+reset done
+
+=== Starting Session 1 and Session 2 in parallel ===
+
+=== Session 1 output ===
+                   log                    
+------------------------------------------
+ [S1] 2026-11-07 07:35:16.365817+01 BEGIN
+(1 row)
+
+BEGIN
+                                      log                                      
+-------------------------------------------------------------------------------
+ [S1] 2026-11-07 07:35:16.36636+01 Locking variants 3 and 6 in ascending order
+(1 row)
+
+ variant_id | stock_qty 
+------------+-----------
+          3 |        30
+          6 |         5
+(2 rows)
+
+                                   log                                   
+-------------------------------------------------------------------------
+ [S1] 2026-11-07 07:35:16.368846+01 Sleeping 2s while holding both locks
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                                  log                                  
+-----------------------------------------------------------------------
+ [S1] 2026-11-07 07:35:18.372185+01 Placing order for variants 3 and 6
+(1 row)
+
+UPDATE 1
+UPDATE 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+                    log                    
+-------------------------------------------
+ [S1] 2026-11-07 07:35:18.383013+01 COMMIT
+(1 row)
+
+COMMIT
+             log              
+------------------------------
+ [S1] Done — order committed.
+(1 row)
+
+
+=== Session 2 output ===
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                   log                    
+------------------------------------------
+ [S2] 2026-11-07 07:35:16.863755+01 BEGIN
+(1 row)
+
+BEGIN
+                                               log                                                
+--------------------------------------------------------------------------------------------------
+ [S2] 2026-11-07 07:35:16.864533+01 Trying to lock variants 3 and 6 (will wait for S1 to release)
+(1 row)
+
+ variant_id | stock_qty 
+------------+-----------
+          3 |        29
+          6 |         4
+(2 rows)
+
+                                         log                                         
+-------------------------------------------------------------------------------------
+ [S2] 2026-11-07 07:35:18.386912+01 Lock acquired — S1 has committed. Placing order.
+(1 row)
+
+UPDATE 1
+UPDATE 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+                    log                    
+-------------------------------------------
+ [S2] 2026-11-07 07:35:18.398795+01 COMMIT
+(1 row)
+
+COMMIT
+             log              
+------------------------------
+ [S2] Done — order committed.
+(1 row)
+
+
+=== Final state ===
+--- Stock for variants 3 and 6 (each reduced by 2 — both orders committed) ---
+ variant_id |      sku       | stock_qty 
+------------+----------------+-----------
+          3 | TH-JOG-M-BLK   |        28
+          6 | TH-AGS-XXL-NVY |         3
+(2 rows)
+
+--- New orders (must be 2 — both sessions committed) ---
+ order_id | customer_id | status | total_amount 
+----------+-------------+--------+--------------
+        4 |           1 | paid   |     43000.00
+        5 |           2 | paid   |     43000.00
+(2 rows)
+
+
+=== CONCLUSION ===
+No deadlock. S2 simply waited for S1 to release variant 3.
+Both sessions committed. Two orders placed.

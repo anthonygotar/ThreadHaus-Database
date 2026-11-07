@@ -1,0 +1,189 @@
+=== Resetting database ===
+Dropping and recreating threadhaus...
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+DROP DATABASE
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+CREATE DATABASE
+Loading schema...
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:9: NOTICE:  table "review" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:10: NOTICE:  table "complaint" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:11: NOTICE:  table "return_request" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:12: NOTICE:  table "delivery" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:13: NOTICE:  table "payment" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:14: NOTICE:  table "order_item" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:15: NOTICE:  table "orders" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:16: NOTICE:  table "product_variant" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:17: NOTICE:  table "product" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:18: NOTICE:  table "category" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:19: NOTICE:  table "address" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:20: NOTICE:  table "staff" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:21: NOTICE:  table "rider" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:22: NOTICE:  table "customer" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+Loading sample data...
+INSERT 0 3
+INSERT 0 3
+INSERT 0 4
+INSERT 0 5
+INSERT 0 4
+INSERT 0 4
+INSERT 0 9
+INSERT 0 3
+INSERT 0 5
+INSERT 0 3
+INSERT 0 3
+INSERT 0 1
+INSERT 0 2
+INSERT 0 3
+reset done
+
+=== Setup: set variant 3 stock to 1 ===
+UPDATE 1
+ variant_id |     sku      | stock_qty 
+------------+--------------+-----------
+          3 | TH-JOG-M-BLK |         1
+(1 row)
+
+
+=== Starting Session 1 and Session 2 in parallel ===
+
+=== Session 1 output ===
+                   log                    
+------------------------------------------
+ [S1] 2026-11-07 07:34:39.417089+01 BEGIN
+(1 row)
+
+BEGIN
+                                   log                                    
+--------------------------------------------------------------------------
+ [S1] 2026-11-07 07:34:39.417731+01 SELECT FOR UPDATE (acquires row lock)
+(1 row)
+
+ stock_qty 
+-----------
+         1
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                                 log                                 
+---------------------------------------------------------------------
+ [S1] 2026-11-07 07:34:41.422305+01 Woke up. stock=1, placing order.
+(1 row)
+
+UPDATE 1
+INSERT 0 1
+INSERT 0 1
+                            log                             
+------------------------------------------------------------
+ [S1] 2026-11-07 07:34:41.427453+01 COMMIT (releasing lock)
+(1 row)
+
+COMMIT
+    log     
+------------
+ [S1] Done.
+(1 row)
+
+
+=== Session 2 output ===
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                   log                    
+------------------------------------------
+ [S2] 2026-11-07 07:34:40.418809+01 BEGIN
+(1 row)
+
+BEGIN
+                                        log                                         
+------------------------------------------------------------------------------------
+ [S2] 2026-11-07 07:34:40.419822+01 SELECT FOR UPDATE (will block until S1 commits)
+(1 row)
+
+ stock_qty 
+-----------
+         0
+(1 row)
+
+                                 log                                  
+----------------------------------------------------------------------
+ [S2] 2026-11-07 07:34:41.430292+01 Lock acquired. Reading stock now.
+(1 row)
+
+ stock_qty 
+-----------
+         0
+(1 row)
+
+                                        log                                        
+-----------------------------------------------------------------------------------
+ [S2] 2026-11-07 07:34:41.431074+01 Stock is 0. Rolling back — cannot place order.
+(1 row)
+
+ROLLBACK
+             log              
+------------------------------
+ [S2] Done — no order placed.
+(1 row)
+
+
+=== Final state ===
+--- Stock (must be 0 — exactly one unit sold) ---
+ variant_id |     sku      | stock_qty 
+------------+--------------+-----------
+          3 | TH-JOG-M-BLK |         0
+(1 row)
+
+--- Orders placed (must be 1 new order, not 2) ---
+ order_id | customer_id | status 
+----------+-------------+--------
+        4 |           1 | paid
+(1 row)
+
+--- Order items for variant 3 (new ones only — must be 1 row) ---
+ order_item_id | order_id | quantity 
+---------------+----------+----------
+             6 |        4 |        1
+(1 row)
+
+
+=== CONCLUSION ===
+SELECT FOR UPDATE caused S2 to wait until S1 committed.
+S2 then saw stock=0 and rolled back. No oversell.

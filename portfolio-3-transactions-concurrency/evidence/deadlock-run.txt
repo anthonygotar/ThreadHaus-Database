@@ -1,0 +1,210 @@
+=== Resetting database ===
+Dropping and recreating threadhaus...
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+DROP DATABASE
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+CREATE DATABASE
+Loading schema...
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:9: NOTICE:  table "review" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:10: NOTICE:  table "complaint" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:11: NOTICE:  table "return_request" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:12: NOTICE:  table "delivery" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:13: NOTICE:  table "payment" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:14: NOTICE:  table "order_item" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:15: NOTICE:  table "orders" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:16: NOTICE:  table "product_variant" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:17: NOTICE:  table "product" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:18: NOTICE:  table "category" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:19: NOTICE:  table "address" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:20: NOTICE:  table "staff" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:21: NOTICE:  table "rider" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:22: NOTICE:  table "customer" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+Loading sample data...
+INSERT 0 3
+INSERT 0 3
+INSERT 0 4
+INSERT 0 5
+INSERT 0 4
+INSERT 0 4
+INSERT 0 9
+INSERT 0 3
+INSERT 0 5
+INSERT 0 3
+INSERT 0 3
+INSERT 0 1
+INSERT 0 2
+INSERT 0 3
+reset done
+
+=== Starting Session 1 and Session 2 in parallel ===
+
+=== Session 1 output ===
+                   log                    
+------------------------------------------
+ [S1] 2026-11-07 07:35:03.745967+01 BEGIN
+(1 row)
+
+BEGIN
+                                log                                
+-------------------------------------------------------------------
+ [S1] 2026-11-07 07:35:03.746579+01 Locking variant 3 (FOR UPDATE)
+(1 row)
+
+ variant_id | stock_qty 
+------------+-----------
+          3 |        30
+(1 row)
+
+                                            log                                            
+-------------------------------------------------------------------------------------------
+ [S1] 2026-11-07 07:35:03.748196+01 Sleeping 1s — S2 will lock variant 6 during this sleep
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                                           log                                           
+-----------------------------------------------------------------------------------------
+ [S1] 2026-11-07 07:35:04.750793+01 Now trying to lock variant 6 (will deadlock with S2)
+(1 row)
+
+psql:05-deadlock-session1.sql:16: ERROR:  deadlock detected
+DETAIL:  Process 26136 waits for ShareLock on transaction 8083; blocked by process 26137.
+Process 26137 waits for ShareLock on transaction 8082; blocked by process 26136.
+HINT:  See server log for query details.
+CONTEXT:  while locking tuple (0,6) in relation "product_variant"
+psql:05-deadlock-session1.sql:19: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:05-deadlock-session1.sql:21: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:05-deadlock-session1.sql:22: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:05-deadlock-session1.sql:26: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:05-deadlock-session1.sql:28: ERROR:  syntax error at or near ":"
+LINE 1: ...der_id, variant_id, quantity, unit_price) VALUES (:order_id,...
+                                                             ^
+psql:05-deadlock-session1.sql:29: ERROR:  syntax error at or near ":"
+LINE 1: ...der_id, variant_id, quantity, unit_price) VALUES (:order_id,...
+                                                             ^
+psql:05-deadlock-session1.sql:31: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ROLLBACK
+             log              
+------------------------------
+ [S1] Done — order committed.
+(1 row)
+
+
+=== Session 2 output ===
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                   log                   
+-----------------------------------------
+ [S2] 2026-11-07 07:35:04.27669+01 BEGIN
+(1 row)
+
+BEGIN
+                                log                                
+-------------------------------------------------------------------
+ [S2] 2026-11-07 07:35:04.277242+01 Locking variant 6 (FOR UPDATE)
+(1 row)
+
+ variant_id | stock_qty 
+------------+-----------
+          6 |         5
+(1 row)
+
+                                               log                                                
+--------------------------------------------------------------------------------------------------
+ [S2] 2026-11-07 07:35:04.280199+01 Sleeping 1s — S1 will try to lock variant 6 during this sleep
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                                           log                                           
+-----------------------------------------------------------------------------------------
+ [S2] 2026-11-07 07:35:05.283442+01 Now trying to lock variant 3 (will deadlock with S1)
+(1 row)
+
+ variant_id | stock_qty 
+------------+-----------
+          3 |        30
+(1 row)
+
+                                log                                
+-------------------------------------------------------------------
+ [S2] 2026-11-07 07:35:05.753222+01 Got both locks. Placing order.
+(1 row)
+
+UPDATE 1
+UPDATE 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+                    log                    
+-------------------------------------------
+ [S2] 2026-11-07 07:35:05.763467+01 COMMIT
+(1 row)
+
+COMMIT
+             log              
+------------------------------
+ [S2] Done — order committed.
+(1 row)
+
+
+=== Final state ===
+--- Stock for variants 3 and 6 ---
+ variant_id |      sku       | stock_qty 
+------------+----------------+-----------
+          3 | TH-JOG-M-BLK   |        29
+          6 | TH-AGS-XXL-NVY |         4
+(2 rows)
+
+--- New orders (one session committed, one was the deadlock victim) ---
+ order_id | customer_id | status | total_amount 
+----------+-------------+--------+--------------
+        4 |           2 | paid   |     43000.00
+(1 row)
+
+
+=== CONCLUSION ===
+One session got the ERROR: deadlock detected and was aborted.
+The other session committed successfully.
+Only one order was placed.
