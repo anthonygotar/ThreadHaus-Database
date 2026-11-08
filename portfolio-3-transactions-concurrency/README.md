@@ -68,3 +68,27 @@ An order with two items. Item 1 (variant 3 × 1) works. `SAVEPOINT s1` is set. I
 
 The gaps in order IDs confirm the identity counter advanced during scenarios A and B even though those transactions were rolled back.
 
+
+---
+
+## d. Concurrency Problem and Fixes
+
+**The unsafe oversell (`evidence/oversell-unsafe-run.txt`)**
+
+I set variant 3 stock to 1, then started two buyer sessions in parallel. Both sessions ran `SELECT stock_qty` before either committed and both read **1**. Both then wrote `SET stock_qty = 0` and inserted their own order and `order_item`. Both committed. Final state: stock = 0 but two `order_item` rows sold for one unit. This is a lost update: Session 2 overwrote Session 1's stock write because it based its update on a value it had read before Session 1 committed.
+
+**Fix A — SELECT ... FOR UPDATE (`evidence/oversell-for-update-run.txt`)**
+
+Session 1 added `FOR UPDATE` to its `SELECT stock_qty`. This acquired a row lock on variant 3. Session 2 started its `SELECT FOR UPDATE` 1 second later and blocked immediately. From the timestamps: S1 committed at `07:34:41.427` and S2 got its lock at `07:34:41.430` — S2 waited about 1 second for S1 to release. After acquiring the lock S2 re-read stock = 0 and rolled back. Final state: one order placed, stock = 0.
+
+**Fix B — conditional UPDATE (`evidence/oversell-conditional-run.txt`)**
+
+No explicit lock. Instead, both sessions ran:
+```sql
+UPDATE product_variant SET stock_qty = stock_qty - 1
+WHERE variant_id = 3 AND stock_qty >= 1;
+```
+This UPDATE is atomic. Session 1 matched 1 row and committed. Session 2 ran next and matched 0 rows (stock was already 0). The application treats 0 rows affected as out-of-stock and rolls back. Final state: one order, stock = 0.
+
+Fix A is simpler to read and guarantees the latest stock value is visible after the lock is acquired. It causes more lock contention because the row is held for the duration of the transaction. Fix B avoids explicit locks and scales better under high concurrency, but requires the application to check the UPDATE row count to decide whether to proceed or roll back.
+
