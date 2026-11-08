@@ -1,0 +1,4 @@
+# Environment files — never commit secrets
+.env
+portfolio-4-nosql/.env
+portfolio-5-distributed-cloud/.env
