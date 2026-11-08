@@ -236,3 +236,92 @@ All concurrency is simulated with fixed `pg_sleep()` delays and exactly two sess
 
 The data is the small sample set from portfolio 1. Tests with larger data volumes or dozens of concurrent sessions might show different planner and lock behaviour. I did not test lock timeout settings, `deadlock_timeout` tuning, or the performance impact of SERIALIZABLE under realistic load. Write performance (insert and update throughput with locks in place) was not measured.
 
+
+---
+
+## i. How to Reproduce
+
+```bash
+# Set environment variables (adjust PGHOST and PGUSER as needed)
+export PGHOST=localhost
+export PGUSER=anthonygotar
+export PGDATABASE=threadhaus
+
+cd portfolio-3-transactions-concurrency/
+
+# Reset the database
+bash reset-db.sh
+
+# Run the commit scenario
+psql -d threadhaus -f 01-order-commit.sql
+
+# Run the rollback scenarios (all three in one file)
+bash reset-db.sh
+psql -d threadhaus -f 02-order-rollback.sql
+
+# Run the concurrency scenarios
+bash run-03-oversell-unsafe.sh
+bash run-04a-oversell-for-update.sh
+bash run-04b-oversell-conditional.sh
+bash run-05-deadlock.sh
+bash run-06-deadlock-fixed.sh
+
+# Run the isolation level scenarios
+bash run-07-nonrepeatable.sh
+bash run-08-phantom.sh
+bash run-09-dirty.sh
+bash run-10-writeskew.sh
+```
+
+All commands use plain `psql` with `PGHOST`, `PGUSER`, and `PGDATABASE` set in the environment. No sudo required.
+
+---
+
+## j. Files and Evidence
+
+**Scripts — single-session:**
+
+| File | What it is |
+|---|---|
+| `reset-db.sh` | Drops, recreates, and reloads threadhaus. Run before each scenario. |
+| `01-order-commit.sql` | Successful order transaction with RETURNING and \gset. |
+| `02-order-rollback.sql` | Three scenarios: auto-abort (A), rollback by choice (B), SAVEPOINT (C). |
+
+**Scripts — two-session concurrency runners:**
+
+| Runner | SQL files | What it tests |
+|---|---|---|
+| `run-03-oversell-unsafe.sh` | `03-oversell-session1.sql`, `03-oversell-session2.sql` | Lost update / oversell under READ COMMITTED |
+| `run-04a-oversell-for-update.sh` | `04a-oversell-session1.sql`, `04a-oversell-session2.sql` | Fix A: SELECT FOR UPDATE |
+| `run-04b-oversell-conditional.sh` | `04b-oversell-session1.sql`, `04b-oversell-session2.sql` | Fix B: conditional UPDATE |
+| `run-05-deadlock.sh` | `05-deadlock-session1.sql`, `05-deadlock-session2.sql` | Deadlock from opposite lock order |
+| `run-06-deadlock-fixed.sh` | `06-deadlock-fixed-session1.sql`, `06-deadlock-fixed-session2.sql` | Fix: ascending lock order |
+| `run-07-nonrepeatable.sh` | `07a-nonrepeatable-s1.sql`, `07b-nonrepeatable-s1.sql`, `07-nonrepeatable-s2.sql` | Non-repeatable read: RC vs RR |
+| `run-08-phantom.sh` | `08a-phantom-s1.sql`, `08b-phantom-s1.sql`, `08-phantom-s2.sql` | Phantom read: RC vs RR |
+| `run-09-dirty.sh` | `09-dirty-s1.sql`, `09-dirty-s2.sql` | Dirty read attempt (READ UNCOMMITTED) |
+| `run-10-writeskew.sh` | `10a-writeskew-s1.sql`, `10a-writeskew-s2.sql`, `10b-writeskew-s1.sql`, `10b-writeskew-s2.sql`, `10b-writeskew-s2-retry.sql` | Write skew: RR vs SERIALIZABLE |
+
+**Evidence files:**
+
+| File | What it shows |
+|---|---|
+| `evidence/commit-run.txt` | Output of 01-order-commit.sql |
+| `evidence/rollback-run.txt` | Output of 02-order-rollback.sql (all three scenarios) |
+| `evidence/oversell-unsafe-run.txt` | Lost update: two sessions both commit |
+| `evidence/oversell-for-update-run.txt` | Fix A: S2 waits and rolls back |
+| `evidence/oversell-conditional-run.txt` | Fix B: conditional UPDATE, S2 rolls back |
+| `evidence/deadlock-run.txt` | Deadlock detected, S1 aborted |
+| `evidence/deadlock-fixed-run.txt` | No deadlock, both sessions commit |
+| `evidence/nonrepeatable-read-committed-run.txt` | 07a and 07b: RC and RR non-repeatable read |
+| `evidence/nonrepeatable-read-repeatable-run.txt` | Same runner output (both 07a and 07b) |
+| `evidence/phantom-read-committed-run.txt` | 08a and 08b: RC and RR phantom read |
+| `evidence/phantom-read-repeatable-run.txt` | Same runner output (both 08a and 08b) |
+| `evidence/dirty-read-run.txt` | READ UNCOMMITTED still sees committed value |
+| `evidence/write-skew-repeatable-run.txt` | 10a and 10b: RR and SERIALIZABLE write skew |
+| `evidence/write-skew-serializable-run.txt` | Same runner output (both 10a and 10b) |
+
+---
+
+## k. AI Use
+
+I used an AI assistant for this portfolio. The full log of what it did and what I checked or changed is in `AI-USE.md` in the repo root.
