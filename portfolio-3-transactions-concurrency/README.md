@@ -166,3 +166,42 @@ FOR UPDATE;
 
 With the same lock order there is no cycle. Session 2 simply waited for Session 1 to release variant 3, then proceeded. Both sessions committed. Two orders placed, variant 3 stock reduced from 30 to 28, variant 6 stock reduced from 5 to 3.
 
+
+---
+
+## f. Isolation Levels
+
+PostgreSQL treats `READ UNCOMMITTED` as `READ COMMITTED`. Dirty reads are not possible at any level.
+
+| Isolation level | Dirty read | Non-repeatable read | Phantom read | Write skew |
+|---|---|---|---|---|
+| READ UNCOMMITTED | Not possible (treated as READ COMMITTED) | Observed (same as RC) | Observed (same as RC) | not tested |
+| READ COMMITTED | Not possible | **Observed** — price changed between two reads in same tx | **Observed** — order count changed between two reads | not tested |
+| REPEATABLE READ | Not possible | **Prevented** — second read returned snapshot value | **Prevented** — PostgreSQL snapshot blocks phantoms | **Vulnerable** — both sessions committed, rule broken |
+| SERIALIZABLE | Not possible | Prevented | Prevented | **Prevented** — one session aborted |
+
+**07 — Non-repeatable read (`evidence/nonrepeatable-read-committed-run.txt`, `evidence/nonrepeatable-read-repeatable-run.txt`)**
+
+Session 1 read variant 3 price twice with a 2-second sleep. Session 2 raised the price by ₦500 and committed in between.
+
+- READ COMMITTED: first read **₦6,500**, second read **₦7,000** — the new price was visible inside the same transaction.
+- REPEATABLE READ: first read **₦6,500**, second read **₦6,500** — snapshot held. When Session 1 then tried to UPDATE the same row, PostgreSQL raised: `ERROR: could not serialize access due to concurrent update`. Session 1 was rolled back.
+
+**08 — Phantom read (`evidence/phantom-read-committed-run.txt`, `evidence/phantom-read-repeatable-run.txt`)**
+
+Session 1 counted orders for customer 1 twice. Session 2 inserted a new order for customer 1 in between.
+
+- READ COMMITTED: first count **1**, second count **2** — new row appeared inside the same transaction (phantom).
+- REPEATABLE READ: both counts **1** — the snapshot did not include Session 2's insert. Note: the SQL standard says REPEATABLE READ does not prevent phantoms, but PostgreSQL's snapshot isolation does prevent them here.
+
+**09 — Dirty read (`evidence/dirty-read-run.txt`)**
+
+Session 1 updated variant 3 price to ₦99,999 without committing, then slept 3 seconds and rolled back. Session 2 ran at `READ UNCOMMITTED` and read the price during the sleep. Session 2 read **₦6,500**, not ₦99,999. PostgreSQL does not implement dirty reads at any isolation level — `READ UNCOMMITTED` behaves identically to `READ COMMITTED`.
+
+**10 — Write skew (`evidence/write-skew-repeatable-run.txt`, `evidence/write-skew-serializable-run.txt`)**
+
+Rule: at least one rider must remain available. Setup: riders 1 and 2 available, rider 3 unavailable. Each session read count = 2, decided it was safe to mark its own rider unavailable, and proceeded.
+
+- REPEATABLE READ: both sessions committed. Final count of available riders: **0** — the rule was broken. This is write skew: each session read a consistent snapshot but their combined writes violated the invariant.
+- SERIALIZABLE: Session 2 got: `ERROR: could not serialize access due to read/write dependencies among transactions` and was rolled back. Session 1 committed (rider 1 unavailable). Session 2 then retried, read count = 1, and did nothing. Final count: **1** — rule preserved.
+
