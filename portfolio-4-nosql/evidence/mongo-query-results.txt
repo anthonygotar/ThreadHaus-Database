@@ -1,0 +1,286 @@
+
+
+
+
+{"product_id":474,"name":"Native Senator 474","brand":"AsoOke Plus","sku":"TH-474-M-BLK","size":"M","colour":"Black","price":6627.63,"stock_qty":55}
+{"product_id":754,"name":"Joggers 754","brand":"AsoOke Plus","sku":"TH-754-M-BLK","size":"M","colour":"Black","price":7297.39,"stock_qty":44}
+{"product_id":779,"name":"Gown 779","brand":"AsoOke Plus","sku":"TH-779-M-BLK","size":"M","colour":"Black","price":7793.7,"stock_qty":95}
+{"product_id":459,"name":"Gown 459","brand":"AsoOke Plus","sku":"TH-459-M-BLK","size":"M","colour":"Black","price":8024.1,"stock_qty":114}
+{"product_id":379,"name":"Gown 379","brand":"AsoOke Plus","sku":"TH-379-M-BLK","size":"M","colour":"Black","price":8915.76,"stock_qty":126}
+{"product_id":594,"name":"Joggers 594","brand":"AsoOke Plus","sku":"TH-594-M-BLK","size":"M","colour":"Black","price":9480.91,"stock_qty":7}
+{"product_id":659,"name":"Agbada Set 659","brand":"AsoOke Plus","sku":"TH-659-M-BLK","size":"M","colour":"Black","price":9828.42,"stock_qty":163}
+{"product_id":529,"name":"Ankara Shirt 529","brand":"AsoOke Plus","sku":"TH-529-M-BLK","size":"M","colour":"Black","price":11435.42,"stock_qty":124}
+{"product_id":699,"name":"Gown 699","brand":"AsoOke Plus","sku":"TH-699-M-BLK","size":"M","colour":"Black","price":12954.11,"stock_qty":180}
+
+=== M2: Product page ===
+
+
+
+category_path: ["Men","Men Tops"]
+rating: avg=4 count=10
+variants (5):
+  {"variant_id":3,"sku":"TH-1-L-BLK","size":"L","colour":"Black","price":21918.41,"stock_qty":118}
+  {"variant_id":2,"sku":"TH-1-M-GRN","size":"M","colour":"Green","price":16197.85,"stock_qty":135}
+  {"variant_id":1,"sku":"TH-1-S-WHT","size":"S","colour":"White","price":19887.15,"stock_qty":33}
+  {"variant_id":4,"sku":"TH-1-XL-BLU","size":"XL","colour":"Blue","price":22165.55,"stock_qty":16}
+  {"variant_id":5,"sku":"TH-1-XXL-RED","size":"XXL","colour":"Red","price":17791.6,"stock_qty":89}
+
+=== M3: Top rated products ===
+
+
+
+  {
+    product_id: 4,
+    name: 'Blouse 4',
+    brand: 'AsoOke Plus',
+    rating_summary: { average: 3.5, count: 10 }
+  },
+  {
+    product_id: 2,
+    name: 'Joggers 2',
+    brand: 'Lagos Stitch',
+    rating_summary: { average: 3.5, count: 10 }
+  },
+  {
+    product_id: 6,
+    name: 'Kaftan 6',
+    brand: 'ThreadHaus',
+    rating_summary: { average: 4.4, count: 10 }
+  },
+  {
+    product_id: 5,
+    name: 'Skirt 5',
+    brand: 'KachiWear',
+    rating_summary: { average: 3.9, count: 10 }
+  },
+  {
+    product_id: 7,
+    name: 'Shorts 7',
+    brand: 'Lagos Stitch',
+    rating_summary: { average: 3.8, count: 10 }
+  },
+  {
+    product_id: 8,
+    name: 'Polo Shirt 8',
+    brand: 'Naija Threads',
+    rating_summary: { average: 3.1, count: 10 }
+  },
+  {
+    product_id: 10,
+    name: 'Native Senator 10',
+    brand: 'KachiWear',
+    rating_summary: { average: 4.1, count: 10 }
+  },
+  {
+    product_id: 3,
+    name: 'Agbada Set 3',
+    brand: 'Naija Threads',
+    rating_summary: { average: 4.3, count: 10 }
+  },
+  {
+    product_id: 1,
+    name: 'Ankara Shirt 1',
+    brand: 'ThreadHaus',
+    rating_summary: { average: 4, count: 10 }
+  },
+  {
+    product_id: 12,
+    name: 'Jacket 12',
+    brand: 'Lagos Stitch',
+    rating_summary: { average: 3.8, count: 10 }
+  },
+  {
+    product_id: 13,
+    name: 'Hoodie 13',
+    brand: 'Naija Threads',
+    rating_summary: { average: 4, count: 10 }
+  },
+  {
+    product_id: 14,
+    name: 'Jeans 14',
+    brand: 'AsoOke Plus',
+    rating_summary: { average: 4.1, count: 10 }
+  },
+  {
+    product_id: 15,
+    name: 'T-Shirt 15',
+    brand: 'KachiWear',
+    rating_summary: { average: 3.9, count: 10 }
+  },
+  {
+    product_id: 9,
+    name: 'Trousers 9',
+    brand: 'AsoOke Plus',
+    rating_summary: { average: 3.8, count: 10 }
+  },
+  {
+    product_id: 16,
+    name: 'Wrapper Set 16',
+    brand: 'ThreadHaus',
+    rating_summary: { average: 3.5, count: 10 }
+  },
+  {
+    product_id: 19,
+    name: 'Agbada Set 19',
+    brand: 'AsoOke Plus',
+    rating_summary: { average: 3.9, count: 10 }
+  },
+  {
+    product_id: 11,
+    name: 'Gown 11',
+    brand: 'ThreadHaus',
+    rating_summary: { average: 3.9, count: 10 }
+  },
+  {
+    product_id: 18,
+    name: 'Joggers 18',
+    brand: 'Naija Threads',
+    rating_summary: { average: 4.3, count: 10 }
+  },
+  {
+    product_id: 17,
+    name: 'Ankara Shirt 17',
+    brand: 'Lagos Stitch',
+    rating_summary: { average: 3.7, count: 10 }
+  },
+  {
+    product_id: 20,
+    name: 'Blouse 20',
+    brand: 'KachiWear',
+    rating_summary: { average: 3.8, count: 10 }
+  }
+]
+Type "it" for more
+=== M4: Stock value per category ===
+
+
+{"total_units":184149,"category":"Women","total_stock_value":8569023315.37}
+{"total_units":63961,"category":"Kids","total_stock_value":3167084438.86}
+{"total_units":62102,"category":"Accessories","total_stock_value":2875760124.5}
+
+=== M5: Text search ===
+
+
+
+  {
+    product_id: 598,
+    name: 'Kaftan 598',
+    brand: 'Naija Threads',
+    score: 0.75
+  },
+  {
+    product_id: 662,
+    name: 'Kaftan 662',
+    brand: 'Lagos Stitch',
+    score: 0.75
+  },
+  {
+    product_id: 262,
+    name: 'Kaftan 262',
+    brand: 'Lagos Stitch',
+    score: 0.75
+  },
+  {
+    product_id: 374,
+    name: 'Kaftan 374',
+    brand: 'AsoOke Plus',
+    score: 0.75
+  },
+  {
+    product_id: 406,
+    name: 'Kaftan 406',
+    brand: 'ThreadHaus',
+    score: 0.75
+  },
+  {
+    product_id: 54,
+    name: 'Kaftan 54',
+    brand: 'AsoOke Plus',
+    score: 0.75
+  },
+  {
+    product_id: 294,
+    name: 'Kaftan 294',
+    brand: 'AsoOke Plus',
+    score: 0.75
+  },
+  {
+    product_id: 854,
+    name: 'Kaftan 854',
+    brand: 'AsoOke Plus',
+    score: 0.75
+  },
+  {
+    product_id: 310,
+    name: 'Kaftan 310',
+    brand: 'KachiWear',
+    score: 0.75
+  },
+  {
+    product_id: 326,
+    name: 'Kaftan 326',
+    brand: 'ThreadHaus',
+    score: 0.75
+  },
+  {
+    product_id: 614,
+    name: 'Kaftan 614',
+    brand: 'AsoOke Plus',
+    score: 0.75
+  },
+  {
+    product_id: 806,
+    name: 'Kaftan 806',
+    brand: 'ThreadHaus',
+    score: 0.75
+  },
+  {
+    product_id: 118,
+    name: 'Kaftan 118',
+    brand: 'Naija Threads',
+    score: 0.75
+  },
+  {
+    product_id: 710,
+    name: 'Kaftan 710',
+    brand: 'KachiWear',
+    score: 0.75
+  },
+  {
+    product_id: 774,
+    name: 'Kaftan 774',
+    brand: 'AsoOke Plus',
+    score: 0.75
+  },
+  {
+    product_id: 342,
+    name: 'Kaftan 342',
+    brand: 'Lagos Stitch',
+    score: 0.75
+  },
+  {
+    product_id: 742,
+    name: 'Kaftan 742',
+    brand: 'Lagos Stitch',
+    score: 0.75
+  },
+  {
+    product_id: 678,
+    name: 'Kaftan 678',
+    brand: 'Naija Threads',
+    score: 0.75
+  },
+  {
+    product_id: 230,
+    name: 'Kaftan 230',
+    brand: 'KachiWear',
+    score: 0.75
+  },
+  {
+    product_id: 502,
+    name: 'Kaftan 502',
+    brand: 'Lagos Stitch',
+    score: 0.75
+  }
+]
+Type "it" for more
