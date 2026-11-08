@@ -205,3 +205,34 @@ Rule: at least one rider must remain available. Setup: riders 1 and 2 available,
 - REPEATABLE READ: both sessions committed. Final count of available riders: **0** — the rule was broken. This is write skew: each session read a consistent snapshot but their combined writes violated the invariant.
 - SERIALIZABLE: Session 2 got: `ERROR: could not serialize access due to read/write dependencies among transactions` and was rolled back. Session 1 committed (rider 1 unavailable). Session 2 then retried, read count = 1, and did nothing. Final count: **1** — rule preserved.
 
+
+---
+
+## g. Analysis
+
+**Stock updates: row lock or conditional UPDATE at READ COMMITTED**
+
+For stock updates ThreadHaus should use either `SELECT ... FOR UPDATE` (Fix A) or the conditional `UPDATE ... WHERE stock_qty >= 1` (Fix B) at the default `READ COMMITTED` level. The unsafe version — read stock, sleep, write back a computed value — produced an oversell in every run: both sessions read stock = 1 and both committed, leaving stock = 0 with two `order_item` rows sold (`evidence/oversell-unsafe-run.txt`). Neither REPEATABLE READ nor SERIALIZABLE would fix this specific bug, because the problem is not a phantom or a serialization anomaly — it is a write based on a stale read.
+
+Fix A (`SELECT FOR UPDATE`) is straightforward: the row lock serialises access so only one session proceeds at a time. The evidence shows Session 2 waited about 1 second for Session 1's lock (`evidence/oversell-for-update-run.txt`, timestamps 07:34:40.419 to 07:34:41.430). The cost is contention: every buyer for the same variant queues behind the current lock holder. Under high traffic this can become a bottleneck, and if two transactions each lock multiple variants in different orders, a deadlock is possible — as shown in `evidence/deadlock-run.txt`.
+
+Fix B (conditional UPDATE) avoids explicit locking. The UPDATE itself is atomic. Session 2's update matched 0 rows and rolled back without ever waiting (`evidence/oversell-conditional-run.txt`). The cost is that the application must inspect the row count after the UPDATE and branch accordingly. It is harder to read but scales better under load because there is no lock to queue behind.
+
+**SERIALIZABLE for invariants like rider availability**
+
+The write skew scenario shows that REPEATABLE READ is not enough when a rule depends on an aggregate across multiple rows. Both sessions read count = 2 and both committed, leaving zero riders available — a violated invariant. SERIALIZABLE caught the anomaly and aborted Session 2 (`evidence/write-skew-serializable-run.txt`). The cost is that the application must be written to retry on serialization failure. The retry in `10b-writeskew-s2-retry.sql` read count = 1, decided it could not proceed, and rolled back cleanly. SERIALIZABLE is worth that complexity for rules that cannot be enforced by a single-row lock, but for simple stock decrement it adds unnecessary overhead.
+
+**Summary of protection costs**
+
+- Row lock (`FOR UPDATE`): waiting, reduced throughput on hot rows, deadlock risk if multiple rows are locked in inconsistent order.
+- Conditional UPDATE: no waiting, but requires application-level row-count checking.
+- SERIALIZABLE: prevents all anomalies, but aborted transactions must be retried; higher overhead per transaction.
+
+---
+
+## h. Limitations
+
+All concurrency is simulated with fixed `pg_sleep()` delays and exactly two sessions. On a real system with many concurrent buyers the race windows would be smaller or larger depending on load, hardware, and network latency. The timings in the evidence are not benchmarks and vary between runs.
+
+The data is the small sample set from portfolio 1. Tests with larger data volumes or dozens of concurrent sessions might show different planner and lock behaviour. I did not test lock timeout settings, `deadlock_timeout` tuning, or the performance impact of SERIALIZABLE under realistic load. Write performance (insert and update throughput with locks in place) was not measured.
+
