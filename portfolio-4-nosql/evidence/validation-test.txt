@@ -1,0 +1,16 @@
+$ docker exec -i threadhaus-mongo mongosh --username threadhaus_admin --password [REDACTED] \
+    --authenticationDatabase admin threadhaus < validation.js
+
+{ ok: 1 }
+Validator applied to products collection.
+
+Attempting to insert an invalid product (stock_qty: -1)...
+Insert correctly rejected.
+Error code: undefined
+Error: Document failed validation
+
+Validation test complete.
+
+---
+Conclusion: The JSON Schema validator on the products collection correctly rejects
+a document where a variant has stock_qty: -1 (violates minimum: 0).
