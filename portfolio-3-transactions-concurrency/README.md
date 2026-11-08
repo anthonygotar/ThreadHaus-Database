@@ -92,3 +92,77 @@ This UPDATE is atomic. Session 1 matched 1 row and committed. Session 2 ran next
 
 Fix A is simpler to read and guarantees the latest stock value is visible after the lock is acquired. It causes more lock contention because the row is held for the duration of the transaction. Fix B avoids explicit locks and scales better under high concurrency, but requires the application to check the UPDATE row count to decide whether to proceed or roll back.
 
+
+---
+
+## e. Deadlock
+
+**The deadlock (`evidence/deadlock-run.txt`)**
+
+Two sessions each needed to lock variants 3 and 6 but locked them in opposite order:
+- Session 1: locked variant 3, slept 1s, then tried to lock variant 6
+- Session 2: locked variant 6, slept 1s, then tried to lock variant 3
+
+Each session was waiting for the other to release a lock. This is a circular wait — a deadlock. PostgreSQL detected it and aborted Session 1 with:
+
+```
+ERROR: deadlock detected
+```
+
+Session 2 then acquired variant 3, committed, and its order was saved. Final state: one order placed.
+
+**How PostgreSQL picks the victim**
+
+PostgreSQL does not pick the cheapest transaction to abort. Instead, each waiting session starts a timer when it begins to wait. The default `deadlock_timeout` is 1 second. The first session whose timer expires runs the deadlock detection check. If a cycle is found, that session is the one aborted — not because it is cheaper, but simply because its timer fired first. In this scenario Session 1 started waiting for variant 6 before Session 2 started waiting for variant 3, so Session 1's timer expired first and it was aborted. This happened on both runs.
+
+**The fix (`evidence/deadlock-fixed-run.txt`)**
+
+Both sessions locked both variants in ascending `variant_id` order in a single statement:
+
+```sql
+SELECT variant_id, stock_qty
+FROM product_variant
+WHERE variant_id IN (3, 6)
+ORDER BY variant_id
+FOR UPDATE;
+```
+
+With the same lock order there is no cycle. Session 2 simply waited for Session 1 to release variant 3 and then proceeded. Both sessions committed. Two orders placed, each variant's stock reduced by 2.
+
+
+---
+
+## e. Deadlock
+
+**The deadlock (`evidence/deadlock-run.txt`)**
+
+Two sessions each needed to lock variants 3 and 6 but locked them in opposite order:
+- Session 1: locked variant 3, slept 1s, then tried to lock variant 6
+- Session 2: locked variant 6, slept 1s, then tried to lock variant 3
+
+Each session was waiting for the other to release a lock — a circular wait. PostgreSQL detected it and aborted Session 1 with:
+
+```
+ERROR: deadlock detected
+```
+
+Session 2 then acquired variant 3, committed, and its order was saved. Final state: one order placed, stock for each variant reduced by 1.
+
+**How PostgreSQL picks the victim**
+
+PostgreSQL does not pick the cheapest transaction to abort. Instead, each waiting session starts an internal timer when it first blocks. The default `deadlock_timeout` is 1 second. The first session whose timer expires runs the deadlock detection algorithm. If a cycle is confirmed, that session is aborted — not because it costs less to undo, but because its timer fired first. In these scenarios Session 1 started waiting for variant 6 first, so its timer expired first and it was aborted. This happened consistently on both runs.
+
+**The fix (`evidence/deadlock-fixed-run.txt`)**
+
+Both sessions locked both variants together in ascending `variant_id` order:
+
+```sql
+SELECT variant_id, stock_qty
+FROM product_variant
+WHERE variant_id IN (3, 6)
+ORDER BY variant_id
+FOR UPDATE;
+```
+
+With the same lock order there is no cycle. Session 2 simply waited for Session 1 to release variant 3, then proceeded. Both sessions committed. Two orders placed, variant 3 stock reduced from 30 to 28, variant 6 stock reduced from 5 to 3.
+
