@@ -1,0 +1,22 @@
+=== PostgreSQL counts (threadhaus_perf, soft-delete filter applied) ===
+  Products:        1000
+  Variants:        5000
+  Total stock_qty: 498044
+  Reviews:         10000
+  Avg rating:      3.7350
+
+=== MongoDB counts (threadhaus) ===
+  Products:        1000
+  Variants:        5000
+  Total stock_qty: 498044
+  Reviews:         10000
+  Avg rating:      3.7350
+
+=== Comparison ===
+  MATCH   Products: PG=1000  MG=1000
+  MATCH   Variants: PG=5000  MG=5000
+  MATCH   Total stock_qty: PG=498044  MG=498044
+  MATCH   Reviews: PG=10000  MG=10000
+  MATCH   Avg rating: PG=3.7350  MG=3.7350
+
+All five figures match.
