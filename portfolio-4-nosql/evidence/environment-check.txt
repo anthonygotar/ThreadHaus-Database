@@ -1,0 +1,33 @@
+=== docker ps (port bindings) ===
+NAMES              IMAGE       STATUS         PORTS
+threadhaus-redis   redis:7.4   Up 3 minutes   127.0.0.1:6379->6379/tcp
+threadhaus-mongo   mongo:7.0   Up 3 minutes   127.0.0.1:27017->27017/tcp
+
+=== Port check: ss -ltn ===
+LISTEN 0      4096       127.0.0.1:27017      0.0.0.0:*
+LISTEN 0      4096       127.0.0.1:6379       0.0.0.0:*
+
+Both ports are bound to 127.0.0.1 only. Not reachable from other machines.
+
+=== MongoDB ping (authenticated as threadhaus_admin) ===
+$ docker exec threadhaus-mongo mongosh --username threadhaus_admin --password [REDACTED] --authenticationDatabase admin --eval "db.adminCommand({ ping: 1 })" --quiet
+{ ok: 1 }
+
+=== Redis authenticated PING ===
+$ docker exec threadhaus-redis redis-cli -a [REDACTED] PING
+PONG
+
+=== Redis unauthenticated command (expect NOAUTH) ===
+$ docker exec threadhaus-redis redis-cli PING
+NOAUTH Authentication required.
+
+=== Image versions (docker image ls) ===
+redis   7.4   3a17a97bb6c7   3 days ago    113MB
+mongo   7.0   bf46c3fd4f18   12 days ago   866MB
+
+=== Server-reported versions ===
+MongoDB server version: 7.0.45
+Redis server version:   7.4.12
+
+=== Password check ===
+Neither password appears in this file. Verified with grep before saving.
