@@ -1,0 +1,31 @@
+After-indexing explain stats.
+Indexes created: idx_category_path, idx_variants_search, idx_rating_summary, idx_text_search.
+
+=== M1: Catalogue search (category=Men, size=M, colour=Black, stock_qty>0) ===
+totalDocsExamined=198
+nReturned=73
+executionTimeMillis=11
+winningPlan stage=FETCH (input: IXSCAN on idx_variants_search)
+Index used: idx_variants_search
+
+Note: idx_category_path was NOT used by the planner for M1.
+The planner chose idx_variants_search (multikey on variant fields) which scans
+198 rows vs 1000 for COLLSCAN. idx_category_path is used independently when
+querying only by category. The higher ms (11 vs 3) is due to the $unwind stage
+in the aggregation pipeline processing more intermediate rows.
+
+=== M3: Top-rated products (rating_summary.count >= 5, limit 20) ===
+totalDocsExamined=20
+nReturned=20
+executionTimeMillis=2
+winningPlan stage=LIMIT (input: IXSCAN on idx_rating_summary)
+Index used: idx_rating_summary
+Docs examined dropped from 1000 to 20 — only reads the top 20 by index.
+
+=== M5: Text search for "Kaftan" ===
+totalDocsExamined=63
+nReturned=63
+executionTimeMillis=4
+winningPlan stage=TEXT_MATCH (IXSCAN on idx_text_search)
+Index used: idx_text_search (text index on name + description)
+Query works now — could not run at all without the text index.

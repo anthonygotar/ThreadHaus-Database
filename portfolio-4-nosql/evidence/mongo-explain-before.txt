@@ -1,0 +1,19 @@
+Baseline explain stats — before any manual indexes.
+Only the _id index existed.
+
+=== M1: Catalogue search (category=Men, size=M, colour=Black, stock_qty>0) ===
+totalDocsExamined=1000
+nReturned=73
+executionTimeMillis=3
+winningPlan stage=COLLSCAN
+
+=== M3: Top-rated products (rating_summary.count >= 5, limit 20) ===
+totalDocsExamined=1000
+nReturned=20
+executionTimeMillis=2
+winningPlan stage=SORT (full collection scan then in-memory sort)
+
+=== M5: Text search for "Kaftan" ===
+Cannot run without a text index.
+Error: text index required for $text query
+Baseline: full collection scan would be needed without a text index.
