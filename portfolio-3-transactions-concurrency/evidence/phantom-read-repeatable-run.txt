@@ -1,0 +1,312 @@
+================================
+08a: READ COMMITTED — phantom read
+================================
+Dropping and recreating threadhaus...
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+DROP DATABASE
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+CREATE DATABASE
+Loading schema...
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:9: NOTICE:  table "review" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:10: NOTICE:  table "complaint" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:11: NOTICE:  table "return_request" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:12: NOTICE:  table "delivery" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:13: NOTICE:  table "payment" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:14: NOTICE:  table "order_item" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:15: NOTICE:  table "orders" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:16: NOTICE:  table "product_variant" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:17: NOTICE:  table "product" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:18: NOTICE:  table "category" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:19: NOTICE:  table "address" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:20: NOTICE:  table "staff" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:21: NOTICE:  table "rider" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:22: NOTICE:  table "customer" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+Loading sample data...
+INSERT 0 3
+INSERT 0 3
+INSERT 0 4
+INSERT 0 5
+INSERT 0 4
+INSERT 0 4
+INSERT 0 9
+INSERT 0 3
+INSERT 0 5
+INSERT 0 3
+INSERT 0 3
+INSERT 0 1
+INSERT 0 2
+INSERT 0 3
+reset done
+
+--- Baseline order count for customer 1 ---
+ order_count 
+-------------
+           1
+(1 row)
+
+
+=== S1 output (READ COMMITTED) ===
+                           log                           
+---------------------------------------------------------
+ [S1] 2026-11-08 07:40:47.944768+01 BEGIN READ COMMITTED
+(1 row)
+
+BEGIN
+                                   log                                   
+-------------------------------------------------------------------------
+ [S1] 2026-11-08 07:40:47.945366+01 First count of orders for customer 1
+(1 row)
+
+ order_count 
+-------------
+           1
+(1 row)
+
+                                        log                                         
+------------------------------------------------------------------------------------
+ [S1] 2026-11-08 07:40:47.947322+01 Sleeping 2s (S2 inserts new order during sleep)
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                                            log                                             
+--------------------------------------------------------------------------------------------
+ [S1] 2026-11-08 07:40:49.950688+01 Second count — READ COMMITTED sees S2 new row (phantom)
+(1 row)
+
+ order_count 
+-------------
+           2
+(1 row)
+
+COMMIT
+    log     
+------------
+ [S1] Done.
+(1 row)
+
+
+=== S2 output ===
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                   log                    
+------------------------------------------
+ [S2] 2026-11-08 07:40:48.948325+01 BEGIN
+(1 row)
+
+BEGIN
+                                  log                                  
+-----------------------------------------------------------------------
+ [S2] 2026-11-08 07:40:48.949038+01 Inserting new order for customer 1
+(1 row)
+
+INSERT 0 1
+                    log                    
+-------------------------------------------
+ [S2] 2026-11-08 07:40:48.951975+01 COMMIT
+(1 row)
+
+COMMIT
+               log                
+----------------------------------
+ [S2] Done — new order committed.
+(1 row)
+
+
+================================
+08b: REPEATABLE READ — no phantom
+================================
+Dropping and recreating threadhaus...
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+DROP DATABASE
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+CREATE DATABASE
+Loading schema...
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:9: NOTICE:  table "review" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:10: NOTICE:  table "complaint" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:11: NOTICE:  table "return_request" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:12: NOTICE:  table "delivery" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:13: NOTICE:  table "payment" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:14: NOTICE:  table "order_item" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:15: NOTICE:  table "orders" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:16: NOTICE:  table "product_variant" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:17: NOTICE:  table "product" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:18: NOTICE:  table "category" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:19: NOTICE:  table "address" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:20: NOTICE:  table "staff" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:21: NOTICE:  table "rider" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:22: NOTICE:  table "customer" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+Loading sample data...
+INSERT 0 3
+INSERT 0 3
+INSERT 0 4
+INSERT 0 5
+INSERT 0 4
+INSERT 0 4
+INSERT 0 9
+INSERT 0 3
+INSERT 0 5
+INSERT 0 3
+INSERT 0 3
+INSERT 0 1
+INSERT 0 2
+INSERT 0 3
+reset done
+
+--- Baseline order count for customer 1 ---
+ order_count 
+-------------
+           1
+(1 row)
+
+
+=== S1 output (REPEATABLE READ) ===
+                           log                            
+----------------------------------------------------------
+ [S1] 2026-11-08 07:41:02.859632+01 BEGIN REPEATABLE READ
+(1 row)
+
+BEGIN
+                                   log                                   
+-------------------------------------------------------------------------
+ [S1] 2026-11-08 07:41:02.860194+01 First count of orders for customer 1
+(1 row)
+
+ order_count 
+-------------
+           1
+(1 row)
+
+                                        log                                         
+------------------------------------------------------------------------------------
+ [S1] 2026-11-08 07:41:02.861845+01 Sleeping 2s (S2 inserts new order during sleep)
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                                                log                                                
+---------------------------------------------------------------------------------------------------
+ [S1] 2026-11-08 07:41:04.865146+01 Second count — REPEATABLE READ snapshot unchanged (no phantom)
+(1 row)
+
+ order_count 
+-------------
+           1
+(1 row)
+
+COMMIT
+    log     
+------------
+ [S1] Done.
+(1 row)
+
+
+=== S2 output ===
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                   log                    
+------------------------------------------
+ [S2] 2026-11-08 07:41:03.861567+01 BEGIN
+(1 row)
+
+BEGIN
+                                  log                                  
+-----------------------------------------------------------------------
+ [S2] 2026-11-08 07:41:03.862208+01 Inserting new order for customer 1
+(1 row)
+
+INSERT 0 1
+                    log                    
+-------------------------------------------
+ [S2] 2026-11-08 07:41:03.867825+01 COMMIT
+(1 row)
+
+COMMIT
+               log                
+----------------------------------
+ [S2] Done — new order committed.
+(1 row)
+
+
+--- Final order count (S2's insert is committed but S1 did not see it) ---
+ order_count 
+-------------
+           2
+(1 row)
+

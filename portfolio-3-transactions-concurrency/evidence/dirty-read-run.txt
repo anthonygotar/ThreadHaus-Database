@@ -1,0 +1,164 @@
+================================
+09: Dirty read attempt
+================================
+Dropping and recreating threadhaus...
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+DROP DATABASE
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+CREATE DATABASE
+Loading schema...
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:9: NOTICE:  table "review" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:10: NOTICE:  table "complaint" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:11: NOTICE:  table "return_request" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:12: NOTICE:  table "delivery" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:13: NOTICE:  table "payment" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:14: NOTICE:  table "order_item" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:15: NOTICE:  table "orders" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:16: NOTICE:  table "product_variant" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:17: NOTICE:  table "product" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:18: NOTICE:  table "category" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:19: NOTICE:  table "address" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:20: NOTICE:  table "staff" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:21: NOTICE:  table "rider" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:22: NOTICE:  table "customer" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+Loading sample data...
+INSERT 0 3
+INSERT 0 3
+INSERT 0 4
+INSERT 0 5
+INSERT 0 4
+INSERT 0 4
+INSERT 0 9
+INSERT 0 3
+INSERT 0 5
+INSERT 0 3
+INSERT 0 3
+INSERT 0 1
+INSERT 0 2
+INSERT 0 3
+reset done
+
+--- Committed price of variant 3 before test ---
+ variant_id |     sku      |  price  
+------------+--------------+---------
+          3 | TH-JOG-M-BLK | 6500.00
+(1 row)
+
+
+=== S1 output (update then rollback) ===
+                   log                    
+------------------------------------------
+ [S1] 2026-11-08 07:41:17.105821+01 BEGIN
+(1 row)
+
+BEGIN
+                                            log                                            
+-------------------------------------------------------------------------------------------
+ [S1] 2026-11-08 07:41:17.106526+01 Updating variant 3 price to 99999 (NOT committing yet)
+(1 row)
+
+UPDATE 1
+                                                  log                                                   
+--------------------------------------------------------------------------------------------------------
+ [S1] 2026-11-08 07:41:17.108791+01 Sleeping 3s — S2 will try to read the dirty value during this sleep
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                                    log                                     
+----------------------------------------------------------------------------
+ [S1] 2026-11-08 07:41:20.113564+01 Rolling back — this update is discarded
+(1 row)
+
+ROLLBACK
+               log               
+---------------------------------
+ [S1] Done — update rolled back.
+(1 row)
+
+
+=== S2 output (READ UNCOMMITTED) ===
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                            log                            
+-----------------------------------------------------------
+ [S2] 2026-11-08 07:41:18.107559+01 BEGIN READ UNCOMMITTED
+(1 row)
+
+BEGIN
+                                              log                                              
+-----------------------------------------------------------------------------------------------
+ [S2] 2026-11-08 07:41:18.108571+01 Reading variant 3 price (S1 has updated but not committed)
+(1 row)
+
+                               log                                
+------------------------------------------------------------------
+ [S2] NOTE: PostgreSQL treats READ UNCOMMITTED as READ COMMITTED.
+(1 row)
+
+                                    log                                     
+----------------------------------------------------------------------------
+ [S2] We expect to see 6500.00, NOT 99999.00 (no dirty read in PostgreSQL).
+(1 row)
+
+ variant_id |     sku      |  price  
+------------+--------------+---------
+          3 | TH-JOG-M-BLK | 6500.00
+(1 row)
+
+COMMIT
+    log     
+------------
+ [S2] Done.
+(1 row)
+
+
+--- Final price (must still be 6500 — S1 rolled back) ---
+ variant_id |     sku      |  price  
+------------+--------------+---------
+          3 | TH-JOG-M-BLK | 6500.00
+(1 row)
+
+
+=== CONCLUSION ===
+S2 saw 6500.00 (the committed price), not 99999.00 (the dirty value).
+PostgreSQL does not implement dirty reads. READ UNCOMMITTED behaves
+the same as READ COMMITTED.

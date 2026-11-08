@@ -1,0 +1,417 @@
+=======================================
+10a: REPEATABLE READ — write skew
+=======================================
+Dropping and recreating threadhaus...
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+DROP DATABASE
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+CREATE DATABASE
+Loading schema...
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:9: NOTICE:  table "review" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:10: NOTICE:  table "complaint" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:11: NOTICE:  table "return_request" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:12: NOTICE:  table "delivery" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:13: NOTICE:  table "payment" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:14: NOTICE:  table "order_item" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:15: NOTICE:  table "orders" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:16: NOTICE:  table "product_variant" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:17: NOTICE:  table "product" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:18: NOTICE:  table "category" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:19: NOTICE:  table "address" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:20: NOTICE:  table "staff" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:21: NOTICE:  table "rider" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:22: NOTICE:  table "customer" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+Loading sample data...
+INSERT 0 3
+INSERT 0 3
+INSERT 0 4
+INSERT 0 5
+INSERT 0 4
+INSERT 0 4
+INSERT 0 9
+INSERT 0 3
+INSERT 0 5
+INSERT 0 3
+INSERT 0 3
+INSERT 0 1
+INSERT 0 2
+INSERT 0 3
+reset done
+
+--- Setup: set only riders 1 and 2 available ---
+UPDATE 3
+UPDATE 2
+ rider_id |  full_name   | is_available 
+----------+--------------+--------------
+        1 | Chukwudi Eze | t
+        2 | Tunde Bakare | t
+        3 | Ngozi Obi    | f
+(3 rows)
+
+
+=== S1 output (REPEATABLE READ) ===
+                           log                            
+----------------------------------------------------------
+ [S1] 2026-11-08 07:41:32.497392+01 BEGIN REPEATABLE READ
+(1 row)
+
+BEGIN
+                                    log                                     
+----------------------------------------------------------------------------
+ [S1] 2026-11-08 07:41:32.497917+01 Count of available riders (should be 2)
+(1 row)
+
+ available_riders 
+------------------
+                2
+(1 row)
+
+                                             log                                             
+---------------------------------------------------------------------------------------------
+ [S1] 2026-11-08 07:41:32.499619+01 Sleeping 2s (S2 will also read count and mark its rider)
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                                     log                                      
+------------------------------------------------------------------------------
+ [S1] 2026-11-08 07:41:34.503007+01 Count > 1, so marking rider 1 unavailable
+(1 row)
+
+UPDATE 1
+                    log                    
+-------------------------------------------
+ [S1] 2026-11-08 07:41:34.505302+01 COMMIT
+(1 row)
+
+COMMIT
+    log     
+------------
+ [S1] Done.
+(1 row)
+
+
+=== S2 output (REPEATABLE READ) ===
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                           log                            
+----------------------------------------------------------
+ [S2] 2026-11-08 07:41:33.505346+01 BEGIN REPEATABLE READ
+(1 row)
+
+BEGIN
+                                    log                                     
+----------------------------------------------------------------------------
+ [S2] 2026-11-08 07:41:33.506278+01 Count of available riders (should be 2)
+(1 row)
+
+ available_riders 
+------------------
+                2
+(1 row)
+
+                      log                      
+-----------------------------------------------
+ [S2] 2026-11-08 07:41:33.50939+01 Sleeping 2s
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                                     log                                      
+------------------------------------------------------------------------------
+ [S2] 2026-11-08 07:41:35.513523+01 Count > 1, so marking rider 2 unavailable
+(1 row)
+
+UPDATE 1
+                    log                    
+-------------------------------------------
+ [S2] 2026-11-08 07:41:35.516041+01 COMMIT
+(1 row)
+
+COMMIT
+    log     
+------------
+ [S2] Done.
+(1 row)
+
+
+--- Final rider availability (BOTH should be FALSE — rule BROKEN) ---
+ rider_id |  full_name   | is_available 
+----------+--------------+--------------
+        1 | Chukwudi Eze | f
+        2 | Tunde Bakare | f
+        3 | Ngozi Obi    | f
+(3 rows)
+
+
+=== CONCLUSION ===
+Both sessions saw count=2, both committed. Zero riders available.
+REPEATABLE READ does not prevent write skew.
+
+=======================================
+10b: SERIALIZABLE — write skew prevented
+=======================================
+Dropping and recreating threadhaus...
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+DROP DATABASE
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+CREATE DATABASE
+Loading schema...
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:9: NOTICE:  table "review" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:10: NOTICE:  table "complaint" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:11: NOTICE:  table "return_request" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:12: NOTICE:  table "delivery" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:13: NOTICE:  table "payment" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:14: NOTICE:  table "order_item" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:15: NOTICE:  table "orders" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:16: NOTICE:  table "product_variant" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:17: NOTICE:  table "product" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:18: NOTICE:  table "category" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:19: NOTICE:  table "address" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:20: NOTICE:  table "staff" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:21: NOTICE:  table "rider" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:22: NOTICE:  table "customer" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+Loading sample data...
+INSERT 0 3
+INSERT 0 3
+INSERT 0 4
+INSERT 0 5
+INSERT 0 4
+INSERT 0 4
+INSERT 0 9
+INSERT 0 3
+INSERT 0 5
+INSERT 0 3
+INSERT 0 3
+INSERT 0 1
+INSERT 0 2
+INSERT 0 3
+reset done
+
+--- Setup: set only riders 1 and 2 available ---
+UPDATE 3
+UPDATE 2
+ rider_id |  full_name   | is_available 
+----------+--------------+--------------
+        1 | Chukwudi Eze | t
+        2 | Tunde Bakare | t
+        3 | Ngozi Obi    | f
+(3 rows)
+
+
+=== S1 output (SERIALIZABLE) ===
+                          log                          
+-------------------------------------------------------
+ [S1] 2026-11-08 07:41:53.584124+01 BEGIN SERIALIZABLE
+(1 row)
+
+BEGIN
+                                    log                                     
+----------------------------------------------------------------------------
+ [S1] 2026-11-08 07:41:53.584801+01 Count of available riders (should be 2)
+(1 row)
+
+ available_riders 
+------------------
+                2
+(1 row)
+
+                      log                       
+------------------------------------------------
+ [S1] 2026-11-08 07:41:53.586362+01 Sleeping 2s
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                                    log                                    
+---------------------------------------------------------------------------
+ [S1] 2026-11-08 07:41:55.589376+01 Count > 1, marking rider 1 unavailable
+(1 row)
+
+UPDATE 1
+                    log                    
+-------------------------------------------
+ [S1] 2026-11-08 07:41:55.591244+01 COMMIT
+(1 row)
+
+COMMIT
+    log     
+------------
+ [S1] Done.
+(1 row)
+
+
+=== S2 output (SERIALIZABLE) ===
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                          log                          
+-------------------------------------------------------
+ [S2] 2026-11-08 07:41:54.585049+01 BEGIN SERIALIZABLE
+(1 row)
+
+BEGIN
+                                    log                                     
+----------------------------------------------------------------------------
+ [S2] 2026-11-08 07:41:54.586023+01 Count of available riders (should be 2)
+(1 row)
+
+ available_riders 
+------------------
+                2
+(1 row)
+
+                      log                       
+------------------------------------------------
+ [S2] 2026-11-08 07:41:54.589893+01 Sleeping 2s
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                                    log                                    
+---------------------------------------------------------------------------
+ [S2] 2026-11-08 07:41:56.593977+01 Count > 1, marking rider 2 unavailable
+(1 row)
+
+psql:10b-writeskew-s2.sql:18: ERROR:  could not serialize access due to read/write dependencies among transactions
+DETAIL:  Reason code: Canceled on identification as a pivot, during write.
+HINT:  The transaction might succeed if retried.
+psql:10b-writeskew-s2.sql:20: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ROLLBACK
+    log     
+------------
+ [S2] Done.
+(1 row)
+
+
+--- State after first attempt (one session aborted) ---
+ rider_id |  full_name   | is_available 
+----------+--------------+--------------
+        1 | Chukwudi Eze | f
+        2 | Tunde Bakare | t
+        3 | Ngozi Obi    | f
+(3 rows)
+
+
+--- Retry: failed session tries again ---
+                                            log                                            
+-------------------------------------------------------------------------------------------
+ [S2-RETRY] 2026-11-08 07:41:56.769205+01 Retrying transaction after serialization failure
+(1 row)
+
+BEGIN
+                                log                                 
+--------------------------------------------------------------------
+ [S2-RETRY] 2026-11-08 07:41:56.769891+01 Count of available riders
+(1 row)
+
+ available_riders 
+------------------
+                1
+(1 row)
+
+                                                    log                                                    
+-----------------------------------------------------------------------------------------------------------
+ [S2-RETRY] 2026-11-08 07:41:56.771911+01 Count is 1. Cannot mark another rider unavailable. Rolling back.
+(1 row)
+
+ROLLBACK
+                log                
+-----------------------------------
+ [S2-RETRY] Done — rule preserved.
+(1 row)
+
+
+--- Final state (one rider still available — rule preserved) ---
+ rider_id |  full_name   | is_available 
+----------+--------------+--------------
+        1 | Chukwudi Eze | f
+        2 | Tunde Bakare | t
+        3 | Ngozi Obi    | f
+(3 rows)
+
+
+=== CONCLUSION ===
+SERIALIZABLE aborted one session. Retry saw count=1 and did not proceed.
+Rule preserved: at least one rider remains available.

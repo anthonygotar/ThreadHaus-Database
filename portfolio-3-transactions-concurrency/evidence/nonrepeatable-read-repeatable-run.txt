@@ -1,0 +1,325 @@
+==========================================
+07a: READ COMMITTED — non-repeatable read
+==========================================
+Dropping and recreating threadhaus...
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+DROP DATABASE
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+CREATE DATABASE
+Loading schema...
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:9: NOTICE:  table "review" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:10: NOTICE:  table "complaint" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:11: NOTICE:  table "return_request" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:12: NOTICE:  table "delivery" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:13: NOTICE:  table "payment" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:14: NOTICE:  table "order_item" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:15: NOTICE:  table "orders" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:16: NOTICE:  table "product_variant" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:17: NOTICE:  table "product" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:18: NOTICE:  table "category" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:19: NOTICE:  table "address" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:20: NOTICE:  table "staff" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:21: NOTICE:  table "rider" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:22: NOTICE:  table "customer" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+Loading sample data...
+INSERT 0 3
+INSERT 0 3
+INSERT 0 4
+INSERT 0 5
+INSERT 0 4
+INSERT 0 4
+INSERT 0 9
+INSERT 0 3
+INSERT 0 5
+INSERT 0 3
+INSERT 0 3
+INSERT 0 1
+INSERT 0 2
+INSERT 0 3
+reset done
+
+--- Baseline price of variant 3 ---
+ variant_id |     sku      |  price  
+------------+--------------+---------
+          3 | TH-JOG-M-BLK | 6500.00
+(1 row)
+
+
+=== S1 output (READ COMMITTED) ===
+                           log                           
+---------------------------------------------------------
+ [S1] 2026-11-08 07:40:16.829746+01 BEGIN READ COMMITTED
+(1 row)
+
+BEGIN
+                               log                                
+------------------------------------------------------------------
+ [S1] 2026-11-08 07:40:16.830188+01 First read of variant 3 price
+(1 row)
+
+ variant_id |     sku      |  price  
+------------+--------------+---------
+          3 | TH-JOG-M-BLK | 6500.00
+(1 row)
+
+                                      log                                       
+--------------------------------------------------------------------------------
+ [S1] 2026-11-08 07:40:16.831851+01 Sleeping 2s (S2 updates price during sleep)
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                                           log                                           
+-----------------------------------------------------------------------------------------
+ [S1] 2026-11-08 07:40:18.835195+01 Second read — READ COMMITTED sees S2 committed value
+(1 row)
+
+ variant_id |     sku      |  price  
+------------+--------------+---------
+          3 | TH-JOG-M-BLK | 7000.00
+(1 row)
+
+COMMIT
+    log     
+------------
+ [S1] Done.
+(1 row)
+
+
+=== S2 output ===
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                   log                    
+------------------------------------------
+ [S2] 2026-11-08 07:40:17.832373+01 BEGIN
+(1 row)
+
+BEGIN
+                                log                                
+-------------------------------------------------------------------
+ [S2] 2026-11-08 07:40:17.833095+01 Updating variant 3 price: +500
+(1 row)
+
+UPDATE 1
+                    log                    
+-------------------------------------------
+ [S2] 2026-11-08 07:40:17.838222+01 COMMIT
+(1 row)
+
+COMMIT
+                   log                    
+------------------------------------------
+ [S2] Done — price updated and committed.
+(1 row)
+
+
+--- Final price (should be baseline + 500) ---
+ variant_id |     sku      |  price  
+------------+--------------+---------
+          3 | TH-JOG-M-BLK | 7000.00
+(1 row)
+
+
+==========================================
+07b: REPEATABLE READ — no non-repeatable read; UPDATE fails
+==========================================
+Dropping and recreating threadhaus...
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+DROP DATABASE
+WARNING:  database "postgres" has a collation version mismatch
+DETAIL:  The database was created using collation version 2.39, but the operating system provides version 2.43.
+HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE postgres REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+CREATE DATABASE
+Loading schema...
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:9: NOTICE:  table "review" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:10: NOTICE:  table "complaint" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:11: NOTICE:  table "return_request" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:12: NOTICE:  table "delivery" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:13: NOTICE:  table "payment" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:14: NOTICE:  table "order_item" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:15: NOTICE:  table "orders" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:16: NOTICE:  table "product_variant" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:17: NOTICE:  table "product" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:18: NOTICE:  table "category" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:19: NOTICE:  table "address" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:20: NOTICE:  table "staff" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:21: NOTICE:  table "rider" does not exist, skipping
+DROP TABLE
+psql:/home/solex/Desktop/ZIN/portfolio-1-database-design/schema.sql:22: NOTICE:  table "customer" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+Loading sample data...
+INSERT 0 3
+INSERT 0 3
+INSERT 0 4
+INSERT 0 5
+INSERT 0 4
+INSERT 0 4
+INSERT 0 9
+INSERT 0 3
+INSERT 0 5
+INSERT 0 3
+INSERT 0 3
+INSERT 0 1
+INSERT 0 2
+INSERT 0 3
+reset done
+
+--- Baseline price of variant 3 ---
+ variant_id |     sku      |  price  
+------------+--------------+---------
+          3 | TH-JOG-M-BLK | 6500.00
+(1 row)
+
+
+=== S1 output (REPEATABLE READ) ===
+                           log                            
+----------------------------------------------------------
+ [S1] 2026-11-08 07:40:31.478532+01 BEGIN REPEATABLE READ
+(1 row)
+
+BEGIN
+                               log                                
+------------------------------------------------------------------
+ [S1] 2026-11-08 07:40:31.479245+01 First read of variant 3 price
+(1 row)
+
+ variant_id |     sku      |  price  
+------------+--------------+---------
+          3 | TH-JOG-M-BLK | 6500.00
+(1 row)
+
+                                      log                                       
+--------------------------------------------------------------------------------
+ [S1] 2026-11-08 07:40:31.481029+01 Sleeping 2s (S2 updates price during sleep)
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                                              log                                              
+-----------------------------------------------------------------------------------------------
+ [S1] 2026-11-08 07:40:33.484441+01 Second read — REPEATABLE READ sees original snapshot value
+(1 row)
+
+ variant_id |     sku      |  price  
+------------+--------------+---------
+          3 | TH-JOG-M-BLK | 6500.00
+(1 row)
+
+                                          log                                           
+----------------------------------------------------------------------------------------
+ [S1] 2026-11-08 07:40:33.485852+01 Trying to UPDATE price — expect serialization error
+(1 row)
+
+psql:07b-nonrepeatable-s1.sql:22: ERROR:  could not serialize access due to concurrent update
+ROLLBACK
+    log     
+------------
+ [S1] Done.
+(1 row)
+
+
+=== S2 output ===
+ pg_sleep 
+----------
+ 
+(1 row)
+
+                   log                    
+------------------------------------------
+ [S2] 2026-11-08 07:40:32.479594+01 BEGIN
+(1 row)
+
+BEGIN
+                                log                                
+-------------------------------------------------------------------
+ [S2] 2026-11-08 07:40:32.480398+01 Updating variant 3 price: +500
+(1 row)
+
+UPDATE 1
+                    log                    
+-------------------------------------------
+ [S2] 2026-11-08 07:40:32.485463+01 COMMIT
+(1 row)
+
+COMMIT
+                   log                    
+------------------------------------------
+ [S2] Done — price updated and committed.
+(1 row)
+
+
+--- Final price (only S2's +500 committed; S1 was rolled back) ---
+ variant_id |     sku      |  price  
+------------+--------------+---------
+          3 | TH-JOG-M-BLK | 7000.00
+(1 row)
+
