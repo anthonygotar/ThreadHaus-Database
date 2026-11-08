@@ -11,6 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PORTFOLIO1="$SCRIPT_DIR/../portfolio-1-database-design"
 
 echo "Dropping and recreating threadhaus..."
+psql -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='threadhaus' AND pid <> pg_backend_pid();" > /dev/null 2>&1 || true
 psql -d postgres -c "DROP DATABASE IF EXISTS threadhaus;"
 psql -d postgres -c "CREATE DATABASE threadhaus;"
 
