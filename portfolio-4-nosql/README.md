@@ -138,3 +138,62 @@ Indexes are in `indexes.js`. Full explain stats are in `evidence/mongo-explain-b
 
 **idx_category_path** was kept as it aids category-only filter queries. The planner chose `idx_variants_search` over it for M1 because it is more selective for the combined size/colour/stock filter.
 
+
+---
+
+## h. Redis
+
+All Redis scripts are in `redis/`. Evidence files are in `evidence/`.
+
+**Cart (`redis/01-cart.redis`, `evidence/redis-cart.txt`)**
+
+Key design: `cart:<customer_id>` as a Hash. Fields are variant IDs, values are quantities.
+
+Commands used: `HSET` to add items, `HINCRBY` to change quantity, `HDEL` to remove one item, `HGETALL` to read the whole cart, `EXPIRE` to set TTL.
+
+Key output:
+```
+HINCRBY cart:42 3 1    → 3   (qty increased from 2 to 3)
+HDEL cart:42 6         → 1   (variant 6 removed)
+EXPIRE cart:42 604800  → 1   (7-day expiry set)
+TTL cart:99            → 10  (demo cart)
+TTL cart:99 (after 5s) → 5   (counting down)
+EXISTS cart:99 (11s)   → 0   (key expired and gone)
+```
+
+**Session (`redis/02-session.redis`, `evidence/redis-session.txt`)**
+
+Key design: `session:<token>` as a String. Value is `customer_id`. Set with `EX 1800` (30 minutes).
+
+Commands used: `SET ... EX`, `GET`, `TTL`, `EXPIRE` for sliding expiry on activity, `DEL` for logout.
+
+Key output:
+```
+GET session:tok_abc123  → 7777 (customer_id returned, session valid)
+TTL session:tok_abc123  → 1800 (30 minutes remaining)
+DEL session:tok_abc123  → 1
+GET session:tok_abc123  → nil  (session gone after logout)
+```
+
+**Best-sellers (`redis/03-bestsellers.sh`, `evidence/redis-bestsellers.txt`)**
+
+Key design: `bestsellers:30d` as a Sorted Set. Members are `variant:<id>`, scores are total quantity sold.
+
+Built from the same PostgreSQL query as Q3 in Portfolio 2 (last 30 days, excluding cancelled). Commands used: `ZADD` to load scores, `ZREVRANGE ... WITHSCORES` to read ranking, `ZINCRBY` to update on a new sale, `INCR` for a product view counter.
+
+Top 10 PostgreSQL and Redis ranking matched exactly (variant 3706 at top with score 35). After `ZINCRBY bestsellers:30d 5 variant:3706`, score became 40 and it remained at the top.
+
+**Stock reservation (`redis/04-stock-reservation.sh`, `redis/reserve.lua`, `evidence/redis-stock-reservation.txt`)**
+
+Key design: `stock:<variant_id>` as a String holding an integer.
+
+The Lua script (`reserve.lua`) atomically reads the stock, checks if enough is available, and decrements it in one server-side operation. No other command can execute between the check and the decrement.
+
+Results over 3 runs (stock=1, two concurrent buyers):
+- **Lua (safe):** buyer1=0 (success, stock decremented), buyer2=-1 (rejected). Final stock=0. All 3 runs identical.
+- **Unsafe GET+SET:** both buyers read stock=1, both wrote 0. Both succeeded. This is the same oversell problem demonstrated in Portfolio 3 with PostgreSQL — a read-then-write race with no atomicity. The Lua script eliminates the race by making the check and decrement a single atomic unit, equivalent to using `SELECT ... FOR UPDATE` or a conditional UPDATE in PostgreSQL.
+
+**Persistence (`redis/05-persistence.sh`, `evidence/redis-persistence.txt`)**
+
+`CONFIG GET appendonly` returned `yes`. After `docker restart threadhaus-redis` and a 5-second wait, both test keys were still present and their TTLs had continued counting down (session: 3600→3594, cart: 86400→86394 — 6 seconds elapsed during the restart cycle).
+
