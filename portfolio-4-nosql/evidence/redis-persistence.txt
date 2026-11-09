@@ -1,0 +1,30 @@
+=== 1. Confirm appendonly is on ===
+appendonly
+yes
+
+=== 2. Create test keys ===
+OK
+2
+1
+--- TTL before restart ---
+session:persist_test TTL: 3600
+cart:persist_test TTL: 86400
+
+=== 3. Restart the container ===
+threadhaus-redis
+Waiting 5s for Redis to come back up...
+
+=== 4. Check keys survived the restart ===
+--- session:persist_test ---
+7777
+TTL: 3594
+--- cart:persist_test ---
+3
+2
+8
+1
+TTL: 86394
+
+=== 5. Cleanup ===
+2
+Done. Keys deleted.
