@@ -1,0 +1,42 @@
+MongoDB index re-test: 10 runs each with and without index, using hint({$natural:1}) to force a collection scan.
+
+=== M1: Catalogue search (category=Men, size=M, colour=Black, stock_qty>0) ===
+
+WITHOUT idx_variants_search (forced COLLSCAN via hint):
+Run times (ms): 16, 7, 7, 5, 6, 7, 8, 16, 10, 7
+Sorted:         5, 6, 7, 7, 7, 7, 8, 10, 16, 16
+Median (avg of 5th+6th): (7+7)/2 = 7.0 ms
+Docs examined: 1000
+
+WITH idx_variants_search:
+Run times (ms): 19, 8, 11, 7, 8, 7, 12, 7, 15, 10
+Sorted:         7, 7, 7, 8, 8, 10, 11, 12, 15, 19
+Median (avg of 5th+6th): (8+8)/2 = 8.0 ms
+Docs examined: 198
+
+Result: Time median is 8ms WITH vs 7ms WITHOUT — no time improvement (worse by ~14%).
+But docs examined dropped from 1000 to 198 (-80%), well above the 50% threshold.
+Decision: KEEP idx_variants_search. The time gain is not measurable at this data size
+(1000 documents fit in memory). With a larger catalogue the index would prevent a
+full scan on disk. Noted clearly per the rule.
+
+=== M3: Top-rated products (rating_summary.count >= 5, sort by average, limit 20) ===
+
+WITHOUT idx_rating_summary (forced COLLSCAN):
+Run times (ms): 11, 4, 10, 3, 8, 3, 3, 4, 5, 10
+Sorted:         3, 3, 3, 4, 4, 5, 8, 10, 10, 11
+Median (avg of 5th+6th): (4+5)/2 = 4.5 ms
+Docs examined: 1000
+
+WITH idx_rating_summary:
+Run times (ms): 4, 0, 0, 0, 0, 2, 0, 0, 0, 0
+Sorted:         0, 0, 0, 0, 0, 0, 0, 0, 2, 4
+Median (avg of 5th+6th): (0+0)/2 = 0.0 ms
+Docs examined: 20
+
+Result: Time median dropped from 4.5ms to 0ms (-100%). Docs examined dropped from 1000 to 20 (-98%).
+Decision: KEEP idx_rating_summary. Clear improvement on both time and docs examined.
+
+=== Summary ===
+All 4 indexes (idx_category_path, idx_variants_search, idx_rating_summary, idx_text_search) kept.
+No indexes dropped.
