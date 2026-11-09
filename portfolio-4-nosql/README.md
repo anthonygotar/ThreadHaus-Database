@@ -220,3 +220,103 @@ The product catalogue has 1,000 documents, all of which fit in memory. The timin
 
 Redis is running as a single node with no replication. A Redis cart is not a system of record — it is a convenience cache. If the Redis node fails before the AOF is flushed, the most recent writes may be lost. The actual durability setting is `appendfsync everysec` (confirmed via `CONFIG GET appendonly` and `CONFIG GET appendfsync`). This means Redis flushes the append-only file to disk at most once per second, so up to one second of writes could be lost after a crash. This is an acceptable trade-off for a cart, but not for a payment record.
 
+
+---
+
+## k. How to Reproduce
+
+```bash
+cd portfolio-4-nosql/
+
+# Copy .env.example to .env and fill in passwords
+cp .env.example .env
+
+# Start MongoDB and Redis
+docker compose up -d
+
+# Run the migration from PostgreSQL threadhaus_perf to MongoDB
+export PGHOST=localhost && export PGUSER=anthonygotar && export PGDATABASE=threadhaus_perf
+bash migrate.sh
+
+# Verify migration (all five figures must match)
+bash reconcile.sh
+
+# Apply the JSON Schema validator and run the validation test
+docker cp validation.js threadhaus-mongo:/tmp/
+docker exec threadhaus-mongo mongosh --username threadhaus_admin \
+  --authenticationDatabase admin threadhaus /tmp/validation.js
+
+# Run MongoDB queries
+docker cp indexes.js threadhaus-mongo:/tmp/
+docker exec threadhaus-mongo mongosh --username threadhaus_admin \
+  --authenticationDatabase admin threadhaus /tmp/indexes.js
+
+docker cp queries.js threadhaus-mongo:/tmp/
+docker exec threadhaus-mongo mongosh --username threadhaus_admin \
+  --authenticationDatabase admin threadhaus /tmp/queries.js
+
+# Redis demos (password read from .env inside each script, never echoed)
+bash redis/03-bestsellers.sh
+bash redis/04-stock-reservation.sh
+bash redis/05-persistence.sh
+```
+
+For the cart and session demos, pass the password via `REDISCLI_AUTH` inside the command — see `redis/01-cart.redis` and `redis/02-session.redis` for the command set.
+
+---
+
+## l. Files and Evidence
+
+**Configuration:**
+
+| File | What it is |
+|---|---|
+| `docker-compose.yml` | MongoDB 7.0 and Redis 7.4 services |
+| `.env.example` | Variable names with placeholder values |
+| `SETUP.md` | Start/stop/connect instructions |
+
+**MongoDB:**
+
+| File | What it is |
+|---|---|
+| `mongo-model.md` | Collection design, example document, comparison table |
+| `migrate.sh` | PostgreSQL → MongoDB export and import |
+| `reconcile.sh` | Counts comparison between PostgreSQL and MongoDB |
+| `validation.js` | JSON Schema validator + invalid insert test |
+| `queries.js` | M1–M5 queries |
+| `indexes.js` | Index creation for M1, M3, M5 |
+
+**Redis:**
+
+| File | What it is |
+|---|---|
+| `redis/01-cart.redis` | Cart hash commands |
+| `redis/02-session.redis` | Session string commands |
+| `redis/03-bestsellers.sh` | Sorted set bestsellers from PostgreSQL |
+| `redis/04-stock-reservation.sh` | Atomic Lua reservation vs unsafe race |
+| `redis/reserve.lua` | Lua stock reservation script |
+| `redis/05-persistence.sh` | AOF persistence across restart |
+
+**Evidence:**
+
+| File | What it shows |
+|---|---|
+| `evidence/environment-check.txt` | MongoDB ping, Redis PONG/NOAUTH, port bindings |
+| `evidence/reconciliation.txt` | All 5 figures matching between PostgreSQL and MongoDB |
+| `evidence/validation-test.txt` | Invalid product rejected with "Document failed validation" |
+| `evidence/mongo-query-results.txt` | Actual output of M1–M5 queries |
+| `evidence/mongo-explain-before.txt` | Explain stats before indexes |
+| `evidence/mongo-explain-after.txt` | Explain stats after indexes |
+| `evidence/mongo-retest.txt` | 10-run median re-test for M1 and M3 |
+| `evidence/mongo-timings.md` | Before/after table with decisions |
+| `evidence/redis-cart.txt` | Cart demo output |
+| `evidence/redis-session.txt` | Session demo output |
+| `evidence/redis-bestsellers.txt` | Best-sellers demo output |
+| `evidence/redis-stock-reservation.txt` | Lua safe vs unsafe race output |
+| `evidence/redis-persistence.txt` | Keys and TTLs after container restart |
+
+---
+
+## m. AI Use
+
+I used an AI assistant throughout this portfolio. The full log of what it did and what I checked or changed is in `AI-USE.md` in the repo root.
