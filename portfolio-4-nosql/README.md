@@ -114,3 +114,27 @@ All five queries are in `queries.js`. Results are in `evidence/mongo-query-resul
 | M4 | Total stock value (price × stock_qty) grouped by top-level category | — | Men ₦8.6bn, Women ₦8.6bn, Kids ₦3.2bn, Accessories ₦2.9bn |
 | M5 | Text search: products whose name or description contains "Kaftan" | — | 63 products matched; requires text index |
 
+
+---
+
+## g. Indexing
+
+Indexes are in `indexes.js`. Full explain stats are in `evidence/mongo-explain-before.txt`, `evidence/mongo-explain-after.txt`, and `evidence/mongo-timings.md`. The 10-run re-test is in `evidence/mongo-retest.txt`.
+
+**Parallel arrays restriction.** MongoDB cannot create a single compound index when two fields are both arrays. `category_path` and the `variants.*` fields are both arrays, so a single compound index covering them would fail with "cannot index parallel arrays". I used two separate indexes instead: `idx_category_path` on `category_path` and `idx_variants_search` on the variant fields.
+
+| Index | Query | Docs examined before | Docs examined after | Median time before | Median time after | Decision |
+|---|---|---|---|---|---|---|
+| idx_variants_search | M1 Catalogue search | 1,000 | 198 | 7.0 ms | 8.0 ms | **Kept** |
+| idx_rating_summary | M3 Top rated | 1,000 | 20 | 4.5 ms | under 1 ms | **Kept** |
+| idx_text_search | M5 Text search | N/A | 63 | N/A | 4 ms | **Kept** |
+| idx_category_path | Category filter | — | — | — | — | **Kept** |
+
+**M1 notes.** The median time with `idx_variants_search` (8.0 ms) was slightly higher than without it (7.0 ms). The index was kept because documents examined fell from 1,000 to 198 — an 80% reduction, which meets the ≥50% threshold. The likely reason there is no speed gain is that all 1,000 documents fit in memory, and the `$unwind` stage in the aggregation pipeline processes the matched documents individually regardless of whether an index was used for the initial filter. At a larger catalogue this index would prevent a full disk scan.
+
+**M3 notes.** Documents examined fell from 1,000 to 20 (-98%). MongoDB reports execution time in whole milliseconds; the result with the index was consistently 0 or 1 ms across 10 runs — under 1 ms rather than a measurable number.
+
+**M5 notes.** Text search cannot run at all without a text index — the query returns `Error: text index required for $text query`. There is no "before" time to compare. The index is required for the feature to work.
+
+**idx_category_path** was kept as it aids category-only filter queries. The planner chose `idx_variants_search` over it for M1 because it is more selective for the combined size/colour/stock filter.
+
