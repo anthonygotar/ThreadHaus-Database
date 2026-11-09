@@ -66,3 +66,51 @@ Example document from migrated data:
 | Tables / collections touched | product, product_variant, category (self-join), review (aggregate) | products (one document) |
 | Operations needed | 3–4 joins + GROUP BY for rating | Single document read by product_id |
 
+
+---
+
+## d. Migration and reconciliation
+
+`migrate.sh` exports from PostgreSQL `threadhaus_perf` to MongoDB `threadhaus`. It runs two SQL queries using `psql`, producing JSON Lines output, then pipes each into `mongoimport` via `docker exec`. Both collections are dropped and recreated each run so the script is re-runnable.
+
+The products query builds the embedded document in SQL: it joins product to category, fetches the parent category name for `category_path`, aggregates all non-deleted variants with `json_agg`, and computes the `rating_summary` from the review table. Reviews are exported as-is with `row_to_json`.
+
+Reconciliation (`reconcile.sh`) compares five figures between PostgreSQL and MongoDB (from `evidence/reconciliation.txt`):
+
+| Figure | PostgreSQL | MongoDB | Match |
+|---|---|---|---|
+| Products | 1,000 | 1,000 | ✓ |
+| Variants | 5,000 | 5,000 | ✓ |
+| Total stock_qty | 498,044 | 498,044 | ✓ |
+| Reviews | 10,000 | 10,000 | ✓ |
+| Avg rating | 3.7350 | 3.7350 | ✓ |
+
+All five match.
+
+---
+
+## e. Validation
+
+`validation.js` adds a JSON Schema validator to the products collection using `collMod`. It requires `name`, `category_path`, `base_price` and `variants`. Each variant must have `sku`, `size`, `colour`, `price` and `stock_qty`, and `stock_qty` must be an integer `>= 0`.
+
+From `evidence/validation-test.txt`, inserting a product with `stock_qty: -1` was correctly rejected:
+
+```
+Insert correctly rejected.
+Error: Document failed validation
+```
+
+---
+
+## f. Queries
+
+All five queries are in `queries.js`. Results are in `evidence/mongo-query-results.txt`.
+
+| Query | Business question | PostgreSQL equivalent | Result summary |
+|---|---|---|---|
+| M1 | In-stock variants in a parent category, chosen size and colour, ordered by price | Q1 (Portfolio 2) | 73 variants returned for Men / M / Black; cheapest at ₦5,787 |
+| M2 | Fetch one product with all variants in a single read | — | Product 1 (Ankara Shirt 1), 5 variants in one document read |
+| M3 | Top 20 products with ≥5 reviews ordered by average rating | Q6 (Portfolio 2) | Top result: avg 4.4, using embedded rating_summary — no join to reviews |
+| M4 | Total stock value (price × stock_qty) grouped by top-level category | — | Men ₦8.6bn, Women ₦8.6bn, Kids ₦3.2bn, Accessories ₦2.9bn |
+| M5 | Text search: products whose name or description contains "Kaftan" | — | 63 products matched; requires text index |
+
