@@ -1,0 +1,57 @@
+==========================================
+PART 1: Safe atomic reservation with Lua
+==========================================
+
+--- Setup: stock:3706 = 1 (one unit) ---
+OK
+1
+
+--- Two buyers race for the last unit ---
+--- Each runs EVALSHA of reserve.lua with qty=1 ---
+/home/solex/Desktop/ZIN/portfolio-4-nosql/redis/04-stock-reservation.sh: line 34: wait: pid 24210 is not a child of this shell
+0
+-1
+--- Buyer 1 result ---
+-1
+--- Stock after buyer 1 ---
+0
+--- Buyer 2 result (stock now 0, should get -1) ---
+-1
+--- Final stock (must be 0) ---
+0
+
+--- Run concurrent race 3 times to confirm repeatability ---
+OK
+Run 1: buyer1=0 buyer2=-1 final_stock=0
+OK
+Run 2: buyer1=0 buyer2=-1 final_stock=0
+OK
+Run 3: buyer1=0 buyer2=-1 final_stock=0
+
+==========================================
+PART 2: Unsafe GET+SET race (like Portfolio 3 oversell)
+==========================================
+
+--- Setup: stock:3706 = 1 ---
+OK
+--- Unsafe buyer 1: GET, sleep 0.5s, SET computed value ---
+--- Unsafe buyer 2: GET, sleep 0.2s, SET computed value ---
+OK
+Unsafe buyer 2: read=1 wrote=0
+OK
+Unsafe buyer 1: read=1 wrote=0
+--- Final stock after unsafe race (should be 0, but both read 1 — expect -1 or 0) ---
+0
+(If stock=0 and both buyers succeeded, that is an oversell equivalent to Portfolio 3)
+
+--- Run unsafe race 3 times ---
+OK
+Run 1: both read=1 both wrote=0 final_stock=0 (oversell if both wrote 0)
+OK
+Run 2: both read=1 both wrote=0 final_stock=0 (oversell if both wrote 0)
+OK
+Run 3: both read=1 both wrote=0 final_stock=0 (oversell if both wrote 0)
+
+=== Cleanup ===
+1
+Done.
