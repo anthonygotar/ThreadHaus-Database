@@ -1,0 +1,38 @@
+# 01-cart.redis — Shopping cart using a Redis Hash
+# Each cart is stored as HASH with key cart:<customer_id>
+# Fields are variant_id (as string), values are quantities.
+# Run with: docker exec -e REDISCLI_AUTH=... threadhaus-redis redis-cli < 01-cart.redis
+
+# --- Add items to cart for customer 42 ---
+# Add variant 3 (Slim Joggers M Black), qty 2
+HSET cart:42 3 2
+
+# Add variant 8 (Ankara Blouse M Yellow), qty 1
+HSET cart:42 8 1
+
+# Add variant 6 (Agbada Set XXL Navy), qty 1
+HSET cart:42 6 1
+
+# --- Change quantity: customer adds another Joggers ---
+HINCRBY cart:42 3 1
+
+# --- View current cart ---
+HGETALL cart:42
+
+# --- Remove one item (customer removes the Agbada) ---
+HDEL cart:42 6
+
+# --- View cart after removal ---
+HGETALL cart:42
+
+# --- Set normal cart TTL: 7 days (604800 seconds) ---
+EXPIRE cart:42 604800
+TTL cart:42
+
+# --- Demo TTL countdown: create a second cart with 10s TTL ---
+HSET cart:99 3 1
+EXPIRE cart:99 10
+TTL cart:99
+
+# Wait 5 seconds and check TTL is counting down
+# (The shell script handles the actual sleep and re-check)

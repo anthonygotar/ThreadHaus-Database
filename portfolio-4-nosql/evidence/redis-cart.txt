@@ -1,0 +1,35 @@
+=== Cart demo: customer 42 ===
+1
+1
+1
+--- HINCRBY: add 1 more variant 3 ---
+3
+--- HGETALL after adds ---
+3
+3
+8
+1
+6
+1
+--- HDEL: remove variant 6 ---
+1
+--- HGETALL after remove ---
+3
+3
+8
+1
+--- EXPIRE 604800 (7 days) on cart:42 ---
+1
+604800
+--- Demo TTL: cart:99 with 10s TTL ---
+1
+1
+TTL immediately:
+10
+Waiting 5 seconds...
+TTL after 5s:
+5
+Waiting 6 more seconds (10s total)...
+Key exists after 11s? (expect -2 = expired):
+-2
+0
