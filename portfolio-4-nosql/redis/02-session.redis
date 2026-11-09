@@ -1,0 +1,24 @@
+# 02-session.redis — Login session as a Redis string with expiry
+# Key: session:<token>, value: customer_id
+# EX sets TTL in seconds. 1800 = 30 minutes.
+# Run with: docker exec -e REDISCLI_AUTH=... threadhaus-redis redis-cli < 02-session.redis
+
+# --- Create session on login ---
+SET session:tok_abc123 4790 EX 1800
+
+# --- GET session to authenticate a request ---
+GET session:tok_abc123
+
+# --- Check remaining TTL ---
+TTL session:tok_abc123
+
+# --- Sliding expiry: extend TTL on activity (reset to 1800) ---
+EXPIRE session:tok_abc123 1800
+TTL session:tok_abc123
+
+# --- Logout: delete the session ---
+DEL session:tok_abc123
+
+# --- Confirm it is gone ---
+GET session:tok_abc123
+TTL session:tok_abc123

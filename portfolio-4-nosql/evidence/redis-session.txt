@@ -1,0 +1,17 @@
+=== Session demo ===
+--- SET session:tok_abc123 4790 EX 1800 ---
+OK
+--- GET session (authenticate request) ---
+4790
+--- TTL (should be ~1800) ---
+1800
+--- EXPIRE 1800 (sliding expiry on activity) ---
+1
+--- TTL after sliding extend ---
+1800
+--- DEL (logout) ---
+1
+--- GET after logout (expect nil) ---
+
+--- TTL after logout (expect -2) ---
+-2
