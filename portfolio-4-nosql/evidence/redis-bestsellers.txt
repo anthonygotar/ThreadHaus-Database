@@ -1,0 +1,104 @@
+=== 1. Build bestsellers:30d from PostgreSQL (Q3 equivalent) ===
+--- PostgreSQL top 10 by qty_sold last 30 days, excl. cancelled ---
+3706|35
+3821|33
+2987|31
+4546|29
+4031|28
+2505|28
+66|28
+346|28
+4786|28
+106|28
+
+--- Loading into Redis sorted set bestsellers:30d ---
+0
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+
+=== 2. ZREVRANGE top 10 with scores ===
+variant:3706
+35
+variant:3821
+33
+variant:2987
+31
+variant:4546
+29
+variant:66
+28
+variant:4786
+28
+variant:4031
+28
+variant:346
+28
+variant:2505
+28
+variant:106
+28
+
+=== 3. Reconciliation: PostgreSQL top 10 vs Redis ranking ===
+PostgreSQL top 10 (variant_id | qty_sold):
+3706|35
+3821|33
+2987|31
+4546|29
+4031|28
+2505|28
+66|28
+346|28
+4786|28
+106|28
+
+Redis top 10 (variant:id | score):
+variant:3706
+35
+variant:3821
+33
+variant:2987
+31
+variant:4546
+29
+variant:66
+28
+variant:4786
+28
+variant:4031
+28
+variant:346
+28
+variant:2505
+28
+variant:106
+28
+
+=== 4. Simulate new sale: ZINCRBY variant 3706 by 5 ===
+Before: variant:3706 score = 35
+40
+After ZINCRBY 5:
+variant:3706
+40
+variant:3821
+33
+variant:2987
+31
+
+=== 5. Product view counter with INCR ===
+OK
+1
+2
+3
+Product 1 views: 3
+
+=== Cleanup ===
+2
+Done.
