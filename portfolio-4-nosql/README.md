@@ -197,3 +197,26 @@ Results over 3 runs (stock=1, two concurrent buyers):
 
 `CONFIG GET appendonly` returned `yes`. After `docker restart threadhaus-redis` and a 5-second wait, both test keys were still present and their TTLs had continued counting down (session: 3600→3594, cart: 86400→86394 — 6 seconds elapsed during the restart cycle).
 
+
+---
+
+## i. Why these stores suit ThreadHaus
+
+**MongoDB fits the product catalogue.** A clothing store's products vary in their attributes — some products have a description, some have a brand, some do not. In PostgreSQL every product row must fit the same column set. In MongoDB each document can carry only the fields it has. More importantly, a product page needs the product name, brand, price, all size/colour variants and the average rating in a single response. In PostgreSQL that requires at minimum four tables: product, product_variant, category (with a self-join for the parent), and an aggregate over review. MongoDB delivers all of it as one document read. The M2 query (`evidence/mongo-query-results.txt`) confirms this: product 1 with all 5 variants was returned in one `findOne` call.
+
+**Redis fits carts, sessions and rankings.** Shopping carts are short-lived: a cart that was not checked out in 7 days can be discarded. Session tokens expire after 30 minutes of inactivity. Redis `EXPIRE` handles both natively with no background job needed on the application side. The TTL countdown confirmed in the cart demo (10s→5s→key gone) and the session demo both demonstrate this. The sorted set is the natural fit for a best-sellers ranking: `ZINCRBY` atomically increments a score on every sale, and `ZREVRANGE` reads the top N in O(log N) time. The stock reservation Lua script shows another Redis strength: atomic read-check-decrement in a single server-side step, preventing the oversell race that requires `SELECT ... FOR UPDATE` or a conditional UPDATE in PostgreSQL (Portfolio 3).
+
+**Orders and payments must stay in PostgreSQL.** An order involves multiple tables: orders, order_item, payment, delivery. These must all be consistent with each other. If a payment insert fails, the order status must not show paid. If stock is decremented but the order_item insert fails, that stock must be restored. These cross-table operations need ACID transactions with rollback. MongoDB supports multi-document transactions since version 4.0, but they add significant overhead and complexity. PostgreSQL's transaction model handles this naturally, as Portfolio 3 demonstrated. Foreign keys also prevent orphaned order_items or payments referencing non-existent orders — constraints that MongoDB does not enforce.
+
+**Costs of the NoSQL approach.** Category names are duplicated in every product document as strings in `category_path`. If the store renames a category, every product in that category must be updated. In PostgreSQL a single row in the category table covers all products. The `rating_summary` is precomputed at migration time; when a customer posts a new review, the application must also update `products.rating_summary`. If that update is missed, the average shown on the product page is wrong. PostgreSQL computes the aggregate from the review table at query time, so it is always current. Finally, there are no joins: a query that needs customer details alongside their order items across MongoDB and Redis requires multiple round-trips and manual assembly in the application.
+
+A graph database (such as Neo4j) would suit "customers who bought this also bought" recommendations, where the relationships between customers and products are the primary data. That use case was not built in this portfolio.
+
+---
+
+## j. Limitations
+
+The product catalogue has 1,000 documents, all of which fit in memory. The timing differences between the indexed and non-indexed M1 query (8.0 ms with vs 7.0 ms without) are within measurement noise at this size. The 80% reduction in documents examined would have a measurable effect at tens of thousands of products. All benchmarks are from a single local machine with no concurrent traffic.
+
+Redis is running as a single node with no replication. A Redis cart is not a system of record — it is a convenience cache. If the Redis node fails before the AOF is flushed, the most recent writes may be lost. The actual durability setting is `appendfsync everysec` (confirmed via `CONFIG GET appendonly` and `CONFIG GET appendfsync`). This means Redis flushes the append-only file to disk at most once per second, so up to one second of writes could be lost after a crash. This is an acceptable trade-off for a cart, but not for a payment record.
+
