@@ -1,0 +1,121 @@
+ThreadHaus PostgreSQL replica stale-read experiment
+Script: run-stale-read.sh, started 2026-11-10 22:28:10.361Z
+scratch table lag_test is not part of the ThreadHaus schema; it is dropped after each run
+all queries use docker exec over the container-local Unix socket; no passwords involved
+
+=== RUN 1 of 2 started 2026-11-10 22:28:10.378Z ===
+scratch table lag_test created on the primary and replayed on the replica
+-- Part A started 2026-11-10 22:28:10.407Z: 100 insert-then-immediately-read trials, async replication --
+trial 4: STALE read on the replica; the row became visible after 7 ms
+trial 5: STALE read on the replica; the row became visible after 5 ms
+trial 8: STALE read on the replica; the row became visible after 5 ms
+trial 21: STALE read on the replica; the row became visible after 7 ms
+trial 23: STALE read on the replica; the row became visible after 10 ms
+trial 28: STALE read on the replica; the row became visible after 5 ms
+trial 30: STALE read on the replica; the row became visible after 8 ms
+trial 32: STALE read on the replica; the row became visible after 6 ms
+trial 37: STALE read on the replica; the row became visible after 12 ms
+trial 70: STALE read on the replica; the row became visible after 5 ms
+trial 75: STALE read on the replica; the row became visible after 4 ms
+trial 76: STALE read on the replica; the row became visible after 9 ms
+trial 78: STALE read on the replica; the row became visible after 4 ms
+trial 79: STALE read on the replica; the row became visible after 4 ms
+trial 80: STALE read on the replica; the row became visible after 5 ms
+trial 82: STALE read on the replica; the row became visible after 4 ms
+trial 83: STALE read on the replica; the row became visible after 4 ms
+trial 84: STALE read on the replica; the row became visible after 4 ms
+trial 85: STALE read on the replica; the row became visible after 4 ms
+trial 87: STALE read on the replica; the row became visible after 5 ms
+trial 88: STALE read on the replica; the row became visible after 9 ms
+trial 90: STALE read on the replica; the row became visible after 5 ms
+trial 91: STALE read on the replica; the row became visible after 8 ms
+trial 92: STALE read on the replica; the row became visible after 4 ms
+trial 93: STALE read on the replica; the row became visible after 7 ms
+trial 94: STALE read on the replica; the row became visible after 7 ms
+trial 95: STALE read on the replica; the row became visible after 6 ms
+trial 98: STALE read on the replica; the row became visible after 5 ms
+trial 100: STALE read on the replica; the row became visible after 5 ms
+Part A run 1 summary: 29 of 100 reads were stale (29.0%); the longest time until a row became visible was 12 ms (poll granularity ~5 ms)
+-- Part A finished 2026-11-10 22:28:11.727Z --
+
+-- Part B started 2026-11-10 22:28:11.737Z: deterministic stale read with pg_wal_replay_pause --
+replica replay state before the pause: not paused
+pg_wal_replay_pause() called; replica replay state now: paused
+row inserted on the primary: id=101
+read on the replica right after the insert: 0 row(s) with id=101 (stale)
+
+-- replay lag on the primary while the replica is paused (each sample follows more writes on the primary) --
+22:28:11.763  bytes_behind=216  replay_lag=00:00:00.003547
+22:28:11.883  bytes_behind=1576952  replay_lag=00:00:00.127481
+22:28:12.015  bytes_behind=3153632  replay_lag=00:00:00.258942
+22:28:14.026  bytes_behind=3153632  replay_lag=00:00:00.325046
+the replica is not catching up: its WAL replay is paused, so bytes_behind stays high
+replica read after ~20k more rows of WAL on the primary: still 0 row(s) with id=101 (stale)
+
+-- calling pg_wal_replay_resume() --
+after the resume the row appeared after 6 ms: now 1 row(s) with id=101 on the replica
+-- waiting for the replica to finish replaying the backlog --
+22:28:14.117  bytes_behind=0  replay_lag=00:00:02.086901
+
+Conclusion: asynchronous streaming replication is eventual consistency.
+The replica serves reads from a state that lags the primary; it converges
+only after it has replayed the WAL that the primary already committed.
+-- Part B finished 2026-11-10 22:28:14.118Z --
+scratch table lag_test dropped on the primary and the replica
+
+=== RUN 2 of 2 started 2026-11-10 22:28:14.136Z ===
+scratch table lag_test created on the primary and replayed on the replica
+-- Part A started 2026-11-10 22:28:14.166Z: 100 insert-then-immediately-read trials, async replication --
+trial 24: STALE read on the replica; the row became visible after 5 ms
+trial 26: STALE read on the replica; the row became visible after 4 ms
+trial 27: STALE read on the replica; the row became visible after 4 ms
+trial 28: STALE read on the replica; the row became visible after 4 ms
+trial 35: STALE read on the replica; the row became visible after 5 ms
+trial 36: STALE read on the replica; the row became visible after 8 ms
+trial 38: STALE read on the replica; the row became visible after 7 ms
+trial 39: STALE read on the replica; the row became visible after 5 ms
+trial 41: STALE read on the replica; the row became visible after 4 ms
+trial 42: STALE read on the replica; the row became visible after 4 ms
+trial 43: STALE read on the replica; the row became visible after 4 ms
+trial 45: STALE read on the replica; the row became visible after 5 ms
+trial 46: STALE read on the replica; the row became visible after 9 ms
+trial 48: STALE read on the replica; the row became visible after 5 ms
+trial 49: STALE read on the replica; the row became visible after 7 ms
+trial 52: STALE read on the replica; the row became visible after 5 ms
+trial 55: STALE read on the replica; the row became visible after 7 ms
+trial 85: STALE read on the replica; the row became visible after 5 ms
+Part A run 2 summary: 18 of 100 reads were stale (18.0%); the longest time until a row became visible was 9 ms (poll granularity ~5 ms)
+-- Part A finished 2026-11-10 22:28:15.369Z --
+
+-- Part B started 2026-11-10 22:28:15.375Z: deterministic stale read with pg_wal_replay_pause --
+replica replay state before the pause: not paused
+pg_wal_replay_pause() called; replica replay state now: paused
+row inserted on the primary: id=101
+read on the replica right after the insert: 0 row(s) with id=101 (stale)
+
+-- replay lag on the primary while the replica is paused (each sample follows more writes on the primary) --
+22:28:15.405  bytes_behind=192  replay_lag=00:00:00.003227
+22:28:15.550  bytes_behind=1576952  replay_lag=00:00:00.148434
+22:28:15.689  bytes_behind=3153648  replay_lag=00:00:00.199252
+22:28:17.700  bytes_behind=3153648  replay_lag=00:00:00.346254
+the replica is not catching up: its WAL replay is paused, so bytes_behind stays high
+replica read after ~20k more rows of WAL on the primary: still 0 row(s) with id=101 (stale)
+
+-- calling pg_wal_replay_resume() --
+after the resume the row appeared after 4 ms: now 1 row(s) with id=101 on the replica
+-- waiting for the replica to finish replaying the backlog --
+22:28:17.787  bytes_behind=0  replay_lag=00:00:02.089593
+
+Conclusion: asynchronous streaming replication is eventual consistency.
+The replica serves reads from a state that lags the primary; it converges
+only after it has replayed the WAL that the primary already committed.
+-- Part B finished 2026-11-10 22:28:17.789Z --
+scratch table lag_test dropped on the primary and the replica
+
+== repeatability ==
+Part A run 1 summary: 29 of 100 reads were stale (29.0%); the longest time until a row became visible was 12 ms (poll granularity ~5 ms)
+Part A run 2 summary: 18 of 100 reads were stale (18.0%); the longest time until a row became visible was 9 ms (poll granularity ~5 ms)
+Both Part A runs above observed stale reads, so the phenomenon is repeatable;
+the exact percentage varies between runs because replication lag is a race.
+Part B is deterministic (pg_wal_replay_pause) and reproduced in both runs.
+Finished 2026-11-10 22:28:17.825Z
