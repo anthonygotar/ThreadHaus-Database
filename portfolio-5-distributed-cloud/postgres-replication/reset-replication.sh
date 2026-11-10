@@ -10,7 +10,10 @@
 set -u
 cd "$(dirname "$0")"
 
-ts() { date -u '+%Y-%m-%d %H:%M:%S.%3NZ'; }
+ts() {
+    local s=${EPOCHREALTIME%.*} f=${EPOCHREALTIME#*.}
+    date -u -d "@$s" "+%Y-%m-%d %H:%M:%S.${f:0:3}Z"
+}
 
 TOTAL_QUERY="SELECT (SELECT count(*) FROM customer)
     + (SELECT count(*) FROM address)

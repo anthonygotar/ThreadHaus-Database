@@ -18,7 +18,10 @@ mkdir -p "$EVDIR"
 OUT=$EVDIR/pg-replication-check.txt
 RUNS=${1:-2}
 
-ts() { date -u '+%Y-%m-%d %H:%M:%S.%3NZ'; }
+ts() {
+    local s=${EPOCHREALTIME%.*} f=${EPOCHREALTIME#*.}
+    date -u -d "@$s" "+%Y-%m-%d %H:%M:%S.${f:0:3}Z"
+}
 
 COUNTS_QUERY="SELECT 'customer' AS table_name, (SELECT count(*) FROM customer) AS row_count
 UNION ALL SELECT 'address', (SELECT count(*) FROM address)
