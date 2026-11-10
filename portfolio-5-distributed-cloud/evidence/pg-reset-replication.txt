@@ -1,4 +1,4 @@
-reset-replication: started 2026-11-10 22:16:05.676Z
+reset-replication: started 2026-11-10 22:28:45.412Z
 -- docker compose down -v (stops the stack, removes its volumes and network) --
  Container threadhaus-pg-replica  Stopping
  Container threadhaus-pg-replica  Stopped
@@ -8,9 +8,9 @@ reset-replication: started 2026-11-10 22:16:05.676Z
  Container threadhaus-pg-primary  Stopped
  Container threadhaus-pg-primary  Removing
  Container threadhaus-pg-primary  Removed
- Network threadhaus-pg-repl  Removing
- Volume threadhaus_pg_primary_data  Removing
  Volume threadhaus_pg_replica_data  Removing
+ Volume threadhaus_pg_primary_data  Removing
+ Network threadhaus-pg-repl  Removing
  Volume threadhaus_pg_primary_data  Removed
  Network threadhaus-pg-repl  Removed
  Volume threadhaus_pg_replica_data  Removed
@@ -30,9 +30,9 @@ reset-replication: started 2026-11-10 22:16:05.676Z
  Container threadhaus-pg-replica  Starting
  Container threadhaus-pg-replica  Started
 -- waiting for the primary to accept connections --
-primary ready after ~3s
+primary ready after ~5s
 -- waiting for the replica to be streaming from the primary --
-replica streaming after ~6s
+replica streaming after ~4s
 -- loading portfolio 1 schema and sample data into the primary --
 psql:../../portfolio-1-database-design/schema.sql:9: NOTICE:  table "review" does not exist, skipping
 DROP TABLE
@@ -100,6 +100,6 @@ replica caught up after ~1s: 52 rows across the 14 ThreadHaus tables on both sid
 (1 row)
 
 NAME                    IMAGE           COMMAND                  SERVICE      CREATED          STATUS          PORTS
-threadhaus-pg-primary   postgres:18.6   "docker-entrypoint.s…"   pg-primary   12 seconds ago   Up 12 seconds   127.0.0.1:5440->5432/tcp
-threadhaus-pg-replica   postgres:18.6   "/usr/local/bin/repl…"   pg-replica   12 seconds ago   Up 11 seconds   127.0.0.1:5441->5432/tcp
-reset-replication: finished 2026-11-10 22:16:20.569Z
+threadhaus-pg-primary   postgres:18.6   "docker-entrypoint.s…"   pg-primary   12 seconds ago   Up 11 seconds   127.0.0.1:5440->5432/tcp
+threadhaus-pg-replica   postgres:18.6   "/usr/local/bin/repl…"   pg-replica   12 seconds ago   Up 10 seconds   127.0.0.1:5441->5432/tcp
+reset-replication: finished 2026-11-10 22:28:59.164Z
