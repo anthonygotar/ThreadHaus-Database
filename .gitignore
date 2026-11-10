@@ -2,3 +2,4 @@
 .env
 portfolio-4-nosql/.env
 portfolio-5-distributed-cloud/.env
+portfolio-5-distributed-cloud/postgres-replication/.env
