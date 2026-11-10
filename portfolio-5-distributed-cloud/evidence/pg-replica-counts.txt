@@ -1,0 +1,50 @@
+ThreadHaus PostgreSQL streaming replication - row counts, primary vs replica
+Collected: 2026-11-10 02:25:44Z
+
+Commands (psql over the container-local Unix socket, no passwords involved):
+  docker exec threadhaus-pg-primary psql -U postgres -d threadhaus -c "<14-table UNION ALL count query, see below>"
+  docker exec threadhaus-pg-replica  psql -U postgres -d threadhaus -c "<same query>"
+
+== waiting for the replica to replay the loaded sample data ==
+replica caught up (total rows across the 14 tables on both sides: 52)
+
+== primary: row counts of all 14 ThreadHaus tables ==
+   table_name    | row_count 
+-----------------+-----------
+ address         |         5
+ category        |         4
+ complaint       |         2
+ customer        |         4
+ delivery        |         3
+ order_item      |         5
+ orders          |         3
+ payment         |         3
+ product         |         4
+ product_variant |         9
+ return_request  |         1
+ review          |         3
+ rider           |         3
+ staff           |         3
+(14 rows)
+
+== replica: row counts of all 14 ThreadHaus tables ==
+   table_name    | row_count 
+-----------------+-----------
+ address         |         5
+ category        |         4
+ complaint       |         2
+ customer        |         4
+ delivery        |         3
+ order_item      |         5
+ orders          |         3
+ payment         |         3
+ product         |         4
+ product_variant |         9
+ return_request  |         1
+ review          |         3
+ rider           |         3
+ staff           |         3
+(14 rows)
+
+== compare the two outputs ==
+the outputs are identical, so all 14 row counts match on primary and replica

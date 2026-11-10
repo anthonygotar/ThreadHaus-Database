@@ -1,0 +1,188 @@
+ThreadHaus PostgreSQL streaming replication - lag under load
+Collected: 2026-11-10 02:26:01Z
+The scratch table lag_scratch exists only for this test and is not part of the ThreadHaus schema.
+
+== create the scratch table on the primary ==
+NOTICE:  table "lag_scratch" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+
+== baseline: replica state before the load ==
+-[ RECORD 1 ]-------+------------------------------
+sampled_at          | 2026-11-10 02:26:01.679185+00
+application_name    | threadhaus_replica
+state               | streaming
+sent_lsn            | 0/3131778
+replay_lsn          | 0/3131778
+replay_behind_bytes | 0
+write_lag           | 00:00:00.001208
+flush_lag           | 00:00:00.00277
+replay_lag          | 00:00:00.005317
+
+
+== start a 200,000 row insert on the primary in the background ==
+== sample pg_stat_replication on the primary every 0.5 s while the insert runs ==
+-[ RECORD 1 ]-------+------------------------------
+sampled_at          | 2026-11-10 02:26:01.876572+00
+application_name    | threadhaus_replica
+state               | streaming
+sent_lsn            | 0/3131778
+replay_lsn          | 0/3131778
+replay_behind_bytes | 0
+write_lag           | 00:00:00.001208
+flush_lag           | 00:00:00.00277
+replay_lag          | 00:00:00.005317
+
+-[ RECORD 1 ]-------+------------------------------
+sampled_at          | 2026-11-10 02:26:02.554382+00
+application_name    | threadhaus_replica
+state               | streaming
+sent_lsn            | 0/3131778
+replay_lsn          | 0/3131778
+replay_behind_bytes | 0
+write_lag           | 00:00:00.001208
+flush_lag           | 00:00:00.00277
+replay_lag          | 00:00:00.005317
+
+-[ RECORD 1 ]-------+------------------------------
+sampled_at          | 2026-11-10 02:26:03.226712+00
+application_name    | threadhaus_replica
+state               | streaming
+sent_lsn            | 0/3131778
+replay_lsn          | 0/3131778
+replay_behind_bytes | 0
+write_lag           | 00:00:00.001208
+flush_lag           | 00:00:00.00277
+replay_lag          | 00:00:00.005317
+
+-[ RECORD 1 ]-------+------------------------------
+sampled_at          | 2026-11-10 02:26:03.908246+00
+application_name    | threadhaus_replica
+state               | streaming
+sent_lsn            | 0/3131778
+replay_lsn          | 0/3131778
+replay_behind_bytes | 0
+write_lag           | 00:00:00.001208
+flush_lag           | 00:00:00.00277
+replay_lag          | 00:00:00.005317
+
+-[ RECORD 1 ]-------+------------------------------
+sampled_at          | 2026-11-10 02:26:04.594663+00
+application_name    | threadhaus_replica
+state               | streaming
+sent_lsn            | 0/3131778
+replay_lsn          | 0/3131778
+replay_behind_bytes | 0
+write_lag           | 00:00:00.001208
+flush_lag           | 00:00:00.00277
+replay_lag          | 00:00:00.005317
+
+-[ RECORD 1 ]-------+------------------------------
+sampled_at          | 2026-11-10 02:26:05.281019+00
+application_name    | threadhaus_replica
+state               | streaming
+sent_lsn            | 0/3131778
+replay_lsn          | 0/3131778
+replay_behind_bytes | 0
+write_lag           | 00:00:00.001208
+flush_lag           | 00:00:00.00277
+replay_lag          | 00:00:00.005317
+
+-[ RECORD 1 ]-------+------------------------------
+sampled_at          | 2026-11-10 02:26:05.981816+00
+application_name    | threadhaus_replica
+state               | streaming
+sent_lsn            | 0/3C30000
+replay_lsn          | 0/3131778
+replay_behind_bytes | 11528328
+write_lag           | 00:00:00.013062
+flush_lag           | 00:00:00.013062
+replay_lag          | 00:00:00.013062
+
+-[ RECORD 1 ]-------+------------------------------
+sampled_at          | 2026-11-10 02:26:06.659906+00
+application_name    | threadhaus_replica
+state               | streaming
+sent_lsn            | 0/4D10000
+replay_lsn          | 0/3131778
+replay_behind_bytes | 29223048
+write_lag           | 00:00:00.124095
+flush_lag           | 00:00:00.124095
+replay_lag          | 00:00:00.124095
+
+-[ RECORD 1 ]-------+------------------------------
+sampled_at          | 2026-11-10 02:26:07.336954+00
+application_name    | threadhaus_replica
+state               | streaming
+sent_lsn            | 0/4D10000
+replay_lsn          | 0/342FEF8
+replay_behind_bytes | 26083592
+write_lag           | 00:00:00.934409
+flush_lag           | 00:00:00.934409
+replay_lag          | 00:00:00.934409
+
+-[ RECORD 1 ]-------+------------------------------
+sampled_at          | 2026-11-10 02:26:08.006904+00
+application_name    | threadhaus_replica
+state               | streaming
+sent_lsn            | 0/4D10000
+replay_lsn          | 0/342FEF8
+replay_behind_bytes | 26083592
+write_lag           | 00:00:00.934409
+flush_lag           | 00:00:00.934409
+replay_lag          | 00:00:00.934409
+
+-[ RECORD 1 ]-------+------------------------------
+sampled_at          | 2026-11-10 02:26:08.681813+00
+application_name    | threadhaus_replica
+state               | streaming
+sent_lsn            | 0/5D10000
+replay_lsn          | 0/342FEF8
+replay_behind_bytes | 42860808
+write_lag           | 00:00:00.934409
+flush_lag           | 00:00:00.934409
+replay_lag          | 00:00:00.934409
+
+INSERT 0 200000
+insert finished, wall time on the primary: 7.51 s
+
+== keep sampling every 0.5 s until the replica has caught up ==
+poll 1: replay_behind_bytes = 30474440, replica lag_scratch rows = 0
+poll 2: replay_behind_bytes = 30343240, replica lag_scratch rows = 0
+poll 3: replay_behind_bytes = 24750656, replica lag_scratch rows = 0
+poll 4: replay_behind_bytes = 0, replica lag_scratch rows = 200000
+
+== replica caught up ==
+-[ RECORD 1 ]-------+------------------------------
+sampled_at          | 2026-11-10 02:26:12.908132+00
+application_name    | threadhaus_replica
+state               | streaming
+sent_lsn            | 0/779A908
+replay_lsn          | 0/779A908
+replay_behind_bytes | 0
+write_lag           | 00:00:02.444841
+flush_lag           | 00:00:02.71689
+replay_lag          | 00:00:02.772996
+
+time from insert end to full replay on the replica: 3.54 s
+
+== final row counts must match ==
+primary: 200000 rows in lag_scratch
+replica: 200000 rows in lag_scratch
+
+== drop the scratch table on the primary so the drop replicates ==
+DROP TABLE
+replica dropped the table after 1 polls
+
+== to_regclass('lag_scratch') on the replica (empty result means gone) ==
+ to_regclass 
+-------------
+ 
+(1 row)
+
+== to_regclass('lag_scratch') on the primary (empty result means gone) ==
+ to_regclass 
+-------------
+ 
+(1 row)
+

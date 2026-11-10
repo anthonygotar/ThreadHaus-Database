@@ -1,0 +1,28 @@
+ThreadHaus PostgreSQL streaming replication - the replica rejects writes
+Collected: 2026-11-10 02:25:46Z
+
+Command (psql over the container-local Unix socket, no passwords involved):
+  docker exec threadhaus-pg-replica psql -U postgres -d threadhaus -c "INSERT INTO customer (full_name, email, phone, password_hash) VALUES ('Blocked Write', 'blocked.write@example.com.ng', '07077777777', 'placeholder_hash');"
+
+== confirm the replica is in recovery before trying to write ==
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+
+== try an INSERT directly on the replica ==
+ERROR:  cannot execute INSERT in a read-only transaction
+psql exit code: 1
+
+== confirm no row was created on either side ==
+ replica_rows_matching 
+-----------------------
+                     0
+(1 row)
+
+ primary_rows_matching 
+-----------------------
+                     0
+(1 row)
+

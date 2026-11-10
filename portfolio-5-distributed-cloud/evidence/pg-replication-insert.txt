@@ -1,0 +1,32 @@
+ThreadHaus PostgreSQL streaming replication - insert on primary, read from replica
+Collected: 2026-11-10 02:25:45Z
+
+Commands (psql over the container-local Unix socket, no passwords involved):
+  docker exec threadhaus-pg-primary psql -U postgres -d threadhaus -c "INSERT INTO customer ... RETURNING customer_id, full_name, email, phone;"
+  poll: docker exec threadhaus-pg-replica psql -U postgres -d threadhaus -Atc "SELECT count(*) FROM customer WHERE email = 'adaeze.okafor@example.com.ng';"
+  docker exec threadhaus-pg-replica psql -U postgres -d threadhaus -c "SELECT customer_id, full_name, email, phone, created_at FROM customer WHERE email = 'adaeze.okafor@example.com.ng';"
+
+== insert one new customer on the primary ==
+ customer_id |   full_name   |            email             |    phone    
+-------------+---------------+------------------------------+-------------
+           5 | Adaeze Okafor | adaeze.okafor@example.com.ng | 07099998888
+(1 row)
+
+INSERT 0 1
+
+== poll the replica until the row appears (streaming replication is asynchronous) ==
+poll 1: replica rows matching the new customer email = 1
+
+== read the new customer from the replica ==
+ customer_id |   full_name   |            email             |    phone    |          created_at          
+-------------+---------------+------------------------------+-------------+------------------------------
+           5 | Adaeze Okafor | adaeze.okafor@example.com.ng | 07099998888 | 2026-11-10 02:25:45.67686+00
+(1 row)
+
+
+== the same row on the primary, for comparison ==
+ customer_id |   full_name   |            email             |    phone    |          created_at          
+-------------+---------------+------------------------------+-------------+------------------------------
+           5 | Adaeze Okafor | adaeze.okafor@example.com.ng | 07099998888 | 2026-11-10 02:25:45.67686+00
+(1 row)
+

@@ -1,0 +1,28 @@
+ThreadHaus PostgreSQL streaming replication - primary and replica status
+Collected: 2026-11-10 02:25:44Z
+
+Commands (psql over the container-local Unix socket, no passwords involved):
+  docker exec threadhaus-pg-primary psql -U postgres -d threadhaus -c 'SELECT * FROM pg_stat_replication;'
+  docker exec threadhaus-pg-primary psql -U postgres -d threadhaus -c 'SELECT * FROM pg_replication_slots;'
+  docker exec threadhaus-pg-replica  psql -U postgres -d threadhaus -c 'SELECT pg_is_in_recovery();'
+
+== a) primary: pg_stat_replication (client_addr, state, sent_lsn, replay_lsn, sync_state) ==
+ pid | usesysid |  usename   |  application_name  | client_addr | client_hostname | client_port |         backend_start         | backend_xmin |   state   | sent_lsn  | write_lsn | flush_lsn | replay_lsn |    write_lag    |    flush_lag    |   replay_lag    | sync_priority | sync_state |          reply_time           
+-----+----------+------------+--------------------+-------------+-----------------+-------------+-------------------------------+--------------+-----------+-----------+-----------+-----------+------------+-----------------+-----------------+-----------------+---------------+------------+-------------------------------
+  87 |    16385 | replicator | threadhaus_replica | 172.25.0.3  |                 |       54730 | 2026-11-10 02:24:50.224686+00 |              | streaming | 0/3127D78 | 0/3127D78 | 0/3127D78 | 0/3127D78  | 00:00:00.000773 | 00:00:00.004762 | 00:00:00.005063 |             0 | async      | 2026-11-10 02:25:35.623017+00
+(1 row)
+
+
+== a) primary: pg_replication_slots ==
+     slot_name      | plugin | slot_type | datoid | database | temporary | active | active_pid | xmin | catalog_xmin | restart_lsn | confirmed_flush_lsn | wal_status | safe_wal_size | two_phase | two_phase_at | inactive_since | conflicting | invalidation_reason | failover | synced 
+--------------------+--------+-----------+--------+----------+-----------+--------+------------+------+--------------+-------------+---------------------+------------+---------------+-----------+--------------+----------------+-------------+---------------------+----------+--------
+ threadhaus_replica |        | physical  |        |          | f         | t      |         87 |      |              | 0/3127D78   |                     | reserved   |               | f         |              |                |             |                     | f        | f
+(1 row)
+
+
+== b) replica: pg_is_in_recovery() (must be true) ==
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
