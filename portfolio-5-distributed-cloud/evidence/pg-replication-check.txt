@@ -1,0 +1,172 @@
+ThreadHaus PostgreSQL streaming replication - proof check
+Script: run-replication-check.sh, started 2026-11-10 22:15:21.125Z
+Commands use docker exec with the container-local Unix socket; no passwords involved.
+
+=== RUN 1 of 2 started 2026-11-10 22:15:21.145Z
+
+-- primary: pg_stat_replication --
+ pid | usesysid |  usename   |  application_name  | client_addr | client_hostname | client_port |         backend_start         | backend_xmin |   state   | sent_lsn  | write_lsn | flush_lsn | replay_lsn |    write_lag    |    flush_lag    |   replay_lag    | sync_priority | sync_state |          reply_time          
+-----+----------+------------+--------------------+-------------+-----------------+-------------+-------------------------------+--------------+-----------+-----------+-----------+-----------+------------+-----------------+-----------------+-----------------+---------------+------------+------------------------------
+  41 |    16385 | replicator | threadhaus_replica | 172.25.0.3  |                 |       38368 | 2026-11-10 21:50:21.184371+00 |              | streaming | 0/782DD60 | 0/782DD60 | 0/782DD60 | 0/782DD60  | 00:00:00.000523 | 00:00:00.003149 | 00:00:00.003152 |             0 | async      | 2026-11-10 22:15:14.92732+00
+(1 row)
+
+-- primary: pg_replication_slots --
+     slot_name      | plugin | slot_type | datoid | database | temporary | active | active_pid | xmin | catalog_xmin | restart_lsn | confirmed_flush_lsn | wal_status | safe_wal_size | two_phase | two_phase_at | inactive_since | conflicting | invalidation_reason | failover | synced 
+--------------------+--------+-----------+--------+----------+-----------+--------+------------+------+--------------+-------------+---------------------+------------+---------------+-----------+--------------+----------------+-------------+---------------------+----------+--------
+ threadhaus_replica |        | physical  |        |          | f         | t      |         41 |      |              | 0/782DD60   |                     | reserved   |               | f         |              |                |             |                     | f        | f
+(1 row)
+
+-- replica: pg_is_in_recovery() (must be true) --
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+
+-- row counts of all 14 ThreadHaus tables, primary vs replica --
+-- primary --
+   table_name    | row_count 
+-----------------+-----------
+ address         |         5
+ category        |         4
+ complaint       |         2
+ customer        |         5
+ delivery        |         3
+ order_item      |         5
+ orders          |         3
+ payment         |         3
+ product         |         4
+ product_variant |         9
+ return_request  |         1
+ review          |         3
+ rider           |         3
+ staff           |         3
+(14 rows)
+-- replica --
+   table_name    | row_count 
+-----------------+-----------
+ address         |         5
+ category        |         4
+ complaint       |         2
+ customer        |         5
+ delivery        |         3
+ order_item      |         5
+ orders          |         3
+ payment         |         3
+ product         |         4
+ product_variant |         9
+ return_request  |         1
+ review          |         3
+ rider           |         3
+ staff           |         3
+(14 rows)
+row counts identical on primary and replica
+
+-- insert a new customer on the primary, read it from the replica --
+ customer_id | full_name  |            email            
+-------------+------------+-----------------------------
+           6 | Bisi Coker | bisi.coker.run1@example.com
+(1 row)
+
+INSERT 0 1
+new row visible on the replica after 1 poll(s)
+ customer_id | full_name  |            email            |    phone    |          created_at           
+-------------+------------+-----------------------------+-------------+-------------------------------
+           6 | Bisi Coker | bisi.coker.run1@example.com | 07066666661 | 2026-11-10 22:15:22.270415+00
+(1 row)
+
+
+-- INSERT directly on the replica (must be rejected) --
+ERROR:  cannot execute INSERT in a read-only transaction
+psql exit code: 1 (non-zero means rejected)
+rows created on replica by the blocked insert: 0
+
+=== RUN 1 finished 2026-11-10 22:15:22.999Z
+
+=== RUN 2 of 2 started 2026-11-10 22:15:23.589Z
+
+-- primary: pg_stat_replication --
+ pid | usesysid |  usename   |  application_name  | client_addr | client_hostname | client_port |         backend_start         | backend_xmin |   state   | sent_lsn  | write_lsn | flush_lsn | replay_lsn |    write_lag    |    flush_lag    |   replay_lag    | sync_priority | sync_state |          reply_time           
+-----+----------+------------+--------------------+-------------+-----------------+-------------+-------------------------------+--------------+-----------+-----------+-----------+-----------+------------+-----------------+-----------------+-----------------+---------------+------------+-------------------------------
+  41 |    16385 | replicator | threadhaus_replica | 172.25.0.3  |                 |       38368 | 2026-11-10 21:50:21.184371+00 |              | streaming | 0/7830468 | 0/7830468 | 0/7830468 | 0/7830468  | 00:00:00.000665 | 00:00:00.004631 | 00:00:00.005153 |             0 | async      | 2026-11-10 22:15:22.282553+00
+(1 row)
+
+-- primary: pg_replication_slots --
+     slot_name      | plugin | slot_type | datoid | database | temporary | active | active_pid | xmin | catalog_xmin | restart_lsn | confirmed_flush_lsn | wal_status | safe_wal_size | two_phase | two_phase_at | inactive_since | conflicting | invalidation_reason | failover | synced 
+--------------------+--------+-----------+--------+----------+-----------+--------+------------+------+--------------+-------------+---------------------+------------+---------------+-----------+--------------+----------------+-------------+---------------------+----------+--------
+ threadhaus_replica |        | physical  |        |          | f         | t      |         41 |      |              | 0/7830468   |                     | reserved   |               | f         |              |                |             |                     | f        | f
+(1 row)
+
+-- replica: pg_is_in_recovery() (must be true) --
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+
+-- row counts of all 14 ThreadHaus tables, primary vs replica --
+-- primary --
+   table_name    | row_count 
+-----------------+-----------
+ address         |         5
+ category        |         4
+ complaint       |         2
+ customer        |         6
+ delivery        |         3
+ order_item      |         5
+ orders          |         3
+ payment         |         3
+ product         |         4
+ product_variant |         9
+ return_request  |         1
+ review          |         3
+ rider           |         3
+ staff           |         3
+(14 rows)
+-- replica --
+   table_name    | row_count 
+-----------------+-----------
+ address         |         5
+ category        |         4
+ complaint       |         2
+ customer        |         6
+ delivery        |         3
+ order_item      |         5
+ orders          |         3
+ payment         |         3
+ product         |         4
+ product_variant |         9
+ return_request  |         1
+ review          |         3
+ rider           |         3
+ staff           |         3
+(14 rows)
+row counts identical on primary and replica
+
+-- insert a new customer on the primary, read it from the replica --
+ customer_id | full_name  |            email            
+-------------+------------+-----------------------------
+           7 | Bisi Coker | bisi.coker.run2@example.com
+(1 row)
+
+INSERT 0 1
+new row visible on the replica after 1 poll(s)
+ customer_id | full_name  |            email            |    phone    |          created_at          
+-------------+------------+-----------------------------+-------------+------------------------------
+           7 | Bisi Coker | bisi.coker.run2@example.com | 07066666662 | 2026-11-10 22:15:24.13498+00
+(1 row)
+
+
+-- INSERT directly on the replica (must be rejected) --
+ERROR:  cannot execute INSERT in a read-only transaction
+psql exit code: 1 (non-zero means rejected)
+rows created on replica by the blocked insert: 0
+
+=== RUN 2 finished 2026-11-10 22:15:24.861Z
+
+== repeatability ==
+The script ran the full check 2 times.
+runs where the new row became visible on the replica: 2
+runs where the replica INSERT was rejected (exit 1): 2
+Both proofs above appearing 2 times means the check is repeatable.
+Finished 2026-11-10 22:15:24.879Z
