@@ -1,0 +1,124 @@
+ThreadHaus PostgreSQL sync vs async replication experiment
+Script: run-sync-vs-async.sh, started 2026-11-10 23:01:20.197Z
+scratch tables sync_test and commit_test are not part of the ThreadHaus schema
+all queries use docker exec over the container-local Unix socket; no passwords involved
+
+==== RUN 1 of 2 started 2026-11-10 23:01:20.460Z ====
+scratch tables sync_test and commit_test created on both sides (not part of the ThreadHaus schema)
+-- phase 1: asynchronous replication (default) --
+synchronous_commit = on, sync_state = async
+stale reads in async mode: 44 of 100 (44.0%), longest until visible: 10 ms
+commit timing async: 200 single-row commits, avg 7.6 ms, p50 7.3 ms, p95 10.9 ms, max 19.7 ms, total 1511 ms
+
+-- phase 2: enabling synchronous replication --
+ALTER SYSTEM
+ALTER SYSTEM
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
+sync_state = sync after ~100 ms
+synchronous_commit = remote_apply (picked up by the already-open session)
+stale reads in sync mode: 0 of 100 (0.0%), longest until visible: 0 ms
+commit timing sync: 200 single-row commits, avg 12.5 ms, p50 12.0 ms, p95 17.1 ms, max 58.9 ms, total 2510 ms
+
+-- comparison table (run 1) --
+metric                                     async        sync (remote_apply) 
+stale reads of 100                         44           0                   
+avg commit latency (ms)                    7.6          12.5                
+p50 commit latency (ms)                    7.3          12.0                
+p95 commit latency (ms)                    10.9         17.1                
+max commit latency (ms)                    19.7         58.9                
+total for 200 commits (ms)                 1511         2510                
+sync/async avg commit latency ratio: 1.6x
+
+-- phase 3: availability trade (stop the replica while in sync mode) --
+stopping threadhaus-pg-replica at 2026-11-10 23:01:29.233Z
+threadhaus-pg-replica
+attempting an INSERT on the primary with timeout 10 at 2026-11-10 23:01:29.899Z
+timeout exit code: 124 (124 = the INSERT was still blocked after 10 s); client-side elapsed: 10021 ms
+rows with note='blocked-while-replica-down' visible on the primary while the replica is down: 0
+this is the consistency-over-availability trade: the write is not acknowledged without the standby
+-- restarting threadhaus-pg-replica at 2026-11-10 23:01:40.116Z
+threadhaus-pg-replica
+sync_state = sync after ~100 ms
+the blocked INSERT completed once the replica returned: 188 ms after the standby was back (the row is now committed)
+blocked row now on the primary: id=401 note=blocked-while-replica-down
+
+-- restoring asynchronous settings --
+ALTER SYSTEM
+ALTER SYSTEM
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
+sync_state = async after ~100 ms
+synchronous_commit = on in the persistent session
+scratch tables dropped on both sides
+==== RUN 1 finished 2026-11-10 23:01:43.531Z ====
+
+==== RUN 2 of 2 started 2026-11-10 23:01:43.772Z ====
+scratch tables sync_test and commit_test created on both sides (not part of the ThreadHaus schema)
+-- phase 1: asynchronous replication (default) --
+synchronous_commit = on, sync_state = async
+stale reads in async mode: 22 of 100 (22.0%), longest until visible: 8 ms
+commit timing async: 200 single-row commits, avg 9.0 ms, p50 8.6 ms, p95 13.8 ms, max 25.0 ms, total 1810 ms
+
+-- phase 2: enabling synchronous replication --
+ALTER SYSTEM
+ALTER SYSTEM
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
+sync_state = sync after ~100 ms
+synchronous_commit = remote_apply (picked up by the already-open session)
+stale reads in sync mode: 0 of 100 (0.0%), longest until visible: 0 ms
+commit timing sync: 200 single-row commits, avg 13.5 ms, p50 13.4 ms, p95 18.3 ms, max 23.2 ms, total 2709 ms
+
+-- comparison table (run 2) --
+metric                                     async        sync (remote_apply) 
+stale reads of 100                         22           0                   
+avg commit latency (ms)                    9.0          13.5                
+p50 commit latency (ms)                    8.6          13.4                
+p95 commit latency (ms)                    13.8         18.3                
+max commit latency (ms)                    25.0         23.2                
+total for 200 commits (ms)                 1810         2709                
+sync/async avg commit latency ratio: 1.5x
+
+-- phase 3: availability trade (stop the replica while in sync mode) --
+stopping threadhaus-pg-replica at 2026-11-10 23:01:53.266Z
+threadhaus-pg-replica
+attempting an INSERT on the primary with timeout 10 at 2026-11-10 23:01:53.871Z
+timeout exit code: 124 (124 = the INSERT was still blocked after 10 s); client-side elapsed: 10018 ms
+rows with note='blocked-while-replica-down' visible on the primary while the replica is down: 0
+this is the consistency-over-availability trade: the write is not acknowledged without the standby
+-- restarting threadhaus-pg-replica at 2026-11-10 23:02:04.080Z
+threadhaus-pg-replica
+sync_state = sync after ~100 ms
+the blocked INSERT completed once the replica returned: 262 ms after the standby was back (the row is now committed)
+blocked row now on the primary: id=401 note=blocked-while-replica-down
+
+-- restoring asynchronous settings --
+ALTER SYSTEM
+ALTER SYSTEM
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
+sync_state = async after ~100 ms
+synchronous_commit = on in the persistent session
+scratch tables dropped on both sides
+==== RUN 2 finished 2026-11-10 23:02:06.405Z ====
+
+== repeatability ==
+
+run 1: async stale reads 44/100, sync stale reads 0/100, avg commit async 7.6 ms vs sync 12.5 ms
+run 2: async stale reads 22/100, sync stale reads 0/100, avg commit async 9.0 ms vs sync 13.5 ms
+In every run: sync mode had 0 stale reads, async mode had stale reads, and
+sync commit latency was higher than async. The result is repeatable.
+Finished 2026-11-10 23:02:06.416Z
